@@ -11,6 +11,7 @@ type structure_item_result = {
   ctx : environment
 }
 
+(** Build the Pervasives module *)
 let build_initial_env s ctx =
   let func ctx builtin =
     let name = builtin_name builtin in
@@ -32,16 +33,18 @@ let run_constant = function
 let rec run_ident s ctx str = match str with
 | Lident id ->
   let%result idx = ExecutionContext.find id ctx in
-  let%result  b = Vector.find s idx in
+  let%result b = Vector.find s idx in
   value_of s ctx b
 | Ldot (path, id) ->
-  Unsafe.bind (run_ident s ctx path) (fun value ->
+  let%result value = run_ident s ctx path in
   match value with
   | Value_struct m ->
-    let%result idx = ExecutionContext.find id ctx in
+    (* The computed path should lead to a module struct
+     * The id is looked up in this module's context *)
+    let%result idx = Map.find id m in
     let%result b = Vector.find s idx in
     value_of s ctx b
-  | _ -> Unsafe.error "Try to get attribute from non-module value")
+  | _ -> Unsafe.error "Try to get attribute from non-module value"
 
 
 and run_expression s ctx _term_ = match _term_ with
@@ -49,6 +52,8 @@ and run_expression s ctx _term_ = match _term_ with
 | Expression_ident (_, id) -> run_ident s ctx id
 | Expression_let (_, is_rec, patts, exp_ary, e2) ->
   if is_rec then
+    (* In a recursive definition, the identifiers involved are pr-eallocated
+     * This function makes the list of identifiers to pre-allocate *)
     let prealloc p = match p with
     | Pattern_var (_, id) -> Unsafe.box id
     | _ -> Unsafe.error "Used pattern other than variable in recursive definition" in
@@ -58,15 +63,18 @@ and run_expression s ctx _term_ = match _term_ with
     let func ctx id exp =
       let idx = Vector.append s (Prealloc exp) in
       ExecutionContext.add id idx ctx in
+    (* Add the identifiers to the current context *)
     let ctx' = MLList.foldl2 func ctx ids exps in
     run_expression s ctx' e2
   else
-    let func ctx_opt patt exp =
-      let%result ctx = ctx_opt in
+    (* The function matches the pattern with the expression and returns the generated context *)
+    let func ctx_nsf patt exp =
+      let%result ctx = ctx_nsf in
       let%result v = run_expression s ctx exp in
       pattern_match s ctx v patt in
     let patt_list = MLList.of_array patts in
     let exps = MLList.of_array exp_ary in
+    (* Generate a context containing every definition *)
     let%result ctx' = MLList.foldl2 func (Unsafe.box ctx) patt_list exps in
     run_expression s ctx' e2
 | Expression_function (_, cases) ->
@@ -90,12 +98,12 @@ and run_expression s ctx _term_ = match _term_ with
     let%result func = run_expression s ctx fe in
     run_apply func (MLList.of_array argse)
 | Expression_tuple (_, tuple) ->
-  let value_opts = MLArray.map (fun e -> run_expression s ctx e) tuple in
-  let%result t = MLArray.lift_unsafe value_opts in
+  let value_nsfs = MLArray.map (fun e -> run_expression s ctx e) tuple in
+  let%result t = MLArray.lift_unsafe value_nsfs in
   Unsafe.box (Value_tuple t)
 | Expression_array (_, ary) ->
-  let value_opts = MLArray.map (fun e -> run_expression s ctx e) ary in
-  let%result a = MLArray.lift_unsafe value_opts in
+  let value_nsfs = MLArray.map (fun e -> run_expression s ctx e) ary in
+  let%result a = MLArray.lift_unsafe value_nsfs in
   Unsafe.box (Value_array a)
 | Expression_variant (_, label, expr_opt) ->
   let value_nsf =
@@ -112,13 +120,13 @@ and run_expression s ctx _term_ = match _term_ with
   let app = Expression_apply (loc, func, [| expr |]) in
   run_expression s ctx app
 | Expression_constructor (_, ctor, args) ->
-  let value_opts = MLArray.map (fun e -> run_expression s ctx e) args in
-  let%result values =  MLArray.lift_unsafe value_opts in
+  let value_nsfs = MLArray.map (fun e -> run_expression s ctx e) args in
+  let%result values =  MLArray.lift_unsafe value_nsfs in
   let sum = Sumtype { constructor = string_of_identifier ctor ; args = values } in
   Unsafe.box (Value_custom sum)
 | Expression_record (_, bindings, base_opt) ->
-  let func map_opt binding =
-    let%result map = map_opt in
+  let func map_nsf binding =
+    let%result map = map_nsf in
     let%result value = run_expression s ctx binding.expr in
     let idx = Vector.append s (Normal value) in
     Unsafe.box (Map.add binding.name idx map) in
@@ -309,17 +317,17 @@ and pattern_match_array s ctx ary patts =
 
   (* For each i in 0 to len,
    * the value i is matched with the pattern i to populate the new environment *)
-  let rec for_loop ctx_opt i =
+  let rec for_loop ctx_nsf i =
     if i === min_len then
       (* terminal case, the resulting environment is returned *)
-      ctx_opt
+      ctx_nsf
     else
       let some_case_func ctx =
         let vali = (MLArray.get ary i) in
         let patti = (MLArray.get patts i) in
         for_loop (pattern_match s ctx vali patti) (i + 1) in
-      (* ctx_opt >>= some_case_func *)
-      Unsafe.bind ctx_opt some_case_func in
+      (* ctx_nsf >>= some_case_func *)
+      Unsafe.bind ctx_nsf some_case_func in
    for_loop (Unsafe.box ctx) 0
 
 let rec run_structure_item s ctx _term_ = match _term_ with
@@ -350,8 +358,8 @@ let rec run_structure_item s ctx _term_ = match _term_ with
     let%result v = value_of s ctx' binding in
     Unsafe.box { value = v ; ctx = ctx' }
   else
-    let func ctx_opt patt exp =
-      let%result ctx = ctx_opt in
+    let func ctx_nsf patt exp =
+      let%result ctx = ctx_nsf in
       let%result v = run_expression s ctx exp in
       pattern_match s ctx v patt in
     let patt_list = MLList.of_array patts in
@@ -381,6 +389,7 @@ let rec run_structure_item s ctx _term_ = match _term_ with
   begin
     match value with
     | Value_struct str ->
+      (* Add the contents of the module to the current context *)
       let map = Map.union str (ExecutionContext.execution_ctx_lexical_env ctx) in
       Unsafe.box { value = nil ; ctx = ExecutionContext.from_map map }
     | _ -> Unsafe.error "Expected a module value"
@@ -396,6 +405,7 @@ let rec run_structure_item s ctx _term_ = match _term_ with
 and run_module_expression s ctx _term_ = match _term_ with
 | Module_ident (_, id) -> run_ident s ctx id
 | Module_structure (_, str) ->
+  (* Run the structure and put the returned context in the struct value *)
   let%result res = run_structure s ctx str in
   let map = ExecutionContext.execution_ctx_lexical_env res.ctx in
   Unsafe.box (Value_struct map)
@@ -416,10 +426,14 @@ and run_module_expression s ctx _term_ = match _term_ with
 | Module_constraint (_, expr) -> run_module_expression s ctx expr
 
 and run_structure s ctx _term_ =
-  let func opt _term_ =
-    let%result res = opt in
+  let func nsf _term_ =
+    let%result res = nsf in
     run_structure_item s res.ctx _term_ in
   (* Fake result data used as first input of the fold function below *)
   let fake_res = Unsafe.box { value = nil ; ctx = ctx } in
   match _term_ with
   | Structure (_, items) -> MLArray.fold func fake_res items
+
+let run s ctx _term_ =
+  let%result res = run_structure s ctx _term_ in
+  Unsafe.box res.ctx

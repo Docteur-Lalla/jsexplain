@@ -1348,7 +1348,7 @@ function runDebug() {
   var init = ExecutionContext.add("Pervasives", idx, ExecutionContext.empty);
   var id = {tag: "Lident", id: "Pervasives"};
   var env = ExecutionContext.open_module(id, ExecutionContext.execution_ctx_lexical_env(pervasives), init);
-  MLInterpreter.run_structure(s, env, program);
+  MLInterpreter.run(s, env, program);
 }
 
 function run() {
@@ -1364,7 +1364,7 @@ function run() {
     var init = ExecutionContext.add("Pervasives", idx, ExecutionContext.empty);
     var id = {tag: "Lident", id: "Pervasives"};
     var env = ExecutionContext.open_module(id, ExecutionContext.execution_ctx_lexical_env(pervasives), init);
-    MLInterpreter.run_structure(s, env, program);
+    MLInterpreter.run(s, env, program);
  } catch (e) {
    success = false;
    // alert("Error during the run");
