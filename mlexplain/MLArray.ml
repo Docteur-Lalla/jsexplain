@@ -46,7 +46,7 @@ let lift_option ary =
 
 let lift_unsafe ary =
   let f ary_nsf nsf =
-    Unsafe.bind ary_nsf (fun ary ->
-    Unsafe.bind nsf (fun v ->
-    Unsafe.box (append ary (make 1 v)))) in
+    let%result ary = ary_nsf in
+    let%result v = nsf in
+    Unsafe.box (append ary (make 1 v)) in
   fold f (Unsafe.box [| |]) ary

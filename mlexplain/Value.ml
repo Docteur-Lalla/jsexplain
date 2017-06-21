@@ -286,16 +286,14 @@ let prim_neq =
 let prim_lt = Value_fun (fun a -> Unsafe.box (Value_fun (fun b -> value_inf a b)))
 let prim_le =
   let func a b =
-    Unsafe.bind (value_inf a b) (fun iv ->
-    Unsafe.bind (bool_of_value iv) (fun ib ->
+    let%result iv = value_inf a b in
+    let%result ib = bool_of_value iv in
     let eqb = value_eq a b in
-    Unsafe.box (value_of_bool (ib || eqb)))) in
+    Unsafe.box (value_of_bool (ib || eqb)) in
   Value_fun (fun a -> Unsafe.box (Value_fun (fun b -> func a b)))
 let prim_gt = Value_fun (fun a -> Unsafe.box (Value_fun (fun b -> value_inf b a)))
 let prim_ge =
   let func a b =
-    (* Unsafe.bind (value_inf a b) (fun iv -> *)
-    (* Unsafe.bind (bool_of_value iv) (fun ib -> *)
     let%result iv = value_inf a b in
     let%result ib = bool_of_value iv in
     let eqb = value_eq a b in

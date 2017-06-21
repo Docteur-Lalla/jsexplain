@@ -10,7 +10,7 @@ assembly.js
 lineof.js
 .depends
 displayed_sources.js
-mlparser/parser.js
+frontend.js
 *.cmo
 *.byte
 *.native
