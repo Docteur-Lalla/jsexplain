@@ -759,7 +759,7 @@ function show_value(state, v, target, depth) {
   t.append(string_of_ml_value(v));
 }
 
-function show_module_content(state, ctx, name, depth) {
+function show_module_contents(state, ctx, name, depth) {
   var md_nsf = MLInterpreter.run_ident(state, ctx, name);
   if (md_nsf.tag == "Result") {
     var md = md_nsf.result;
@@ -846,11 +846,29 @@ function show_execution_ctx(state, execution_ctx, target) {
     var buf = "<ul>";
     
     while(modules.tag != "[]") {
-      buf += "<li>" + show_module_name(modules.head.id) + "</li>";
-      /*buf += '<br/><div style="padding-left: 1em;">'
-        + show_module_content(state, execution_ctx, modules.head.id, 1)
-        + "</div></li>";*/
+      var obj_target = fresh_id();
+      var head_id = modules.head.id;
+      buf += '<li><a onclick="handlers[\'' + obj_target + '\']()">'
+        + show_module_name(head_id)
+        + "</a><span id=\"" + obj_target + "\" "
+        + "style=\"padding-left: 1em;\"></span></li>";
       modules = modules.tail;
+
+      function handler_close() {
+        handlers[obj_target] = handler_open;
+        $('#' + obj_target).html("");
+        interpreter.focus();
+      }
+
+      function handler_open() {
+        handlers[obj_target] = handler_close;
+        $('#' + obj_target).html("<br/>" + show_module_contents(state, execution_ctx, head_id, 1));
+        interpreter.focus();
+      }
+
+      handlers[obj_target] = handler_open;
+      console.log(obj_target);
+      console.log(handlers[obj_target]);
     }
 
     buf += "</ul>";
