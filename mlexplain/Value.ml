@@ -93,14 +93,6 @@ let rec value_eq v1 v2 = match v1 with
       MLArray.all_true blist
     | _ -> false
   end
-| Value_list l1 ->
-  begin
-    match v2 with
-    | Value_list l2 ->
-      let blist = MLList.zipwith value_eq l1 l2 in
-      MLList.all_true blist
-    | _ -> false
-  end
 | Value_array a1 ->
   begin
     match v2 with

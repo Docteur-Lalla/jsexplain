@@ -62,12 +62,13 @@ let raise_value =
 
 (** Signature of the module Pervasives *)
 let pervasives_sign =
-  Sig_value (Ident.create "raise", raise_value) ::
-  List.map (fun id -> Sig_value (Ident.create id, int_bin_op)) ["+" ; "-" ; "*" ; "/"] @
-  List.map (fun id -> Sig_value (Ident.create id, float_bin_op)) ["+." ; "-." ; "*." ; "/."] @
-  List.map (fun id -> Sig_value (Ident.create id, bool_bin_op)) ["&&" ; "||"] @
-  List.map (fun id -> Sig_value (Ident.create id, cmp_bin_op)) ["=" ; "<" ; ">" ; "<=" ; "=<" ; "<>"] @
-  List.map (fun id -> Sig_value (Ident.create id, float_float_function_type)) float_float_function_list
+  Sig_value (Ident.create "raise", raise_value) :: List.concat [
+    List.map (fun id -> Sig_value (Ident.create id, int_bin_op)) ["+" ; "-" ; "*" ; "/"] ;
+    List.map (fun id -> Sig_value (Ident.create id, float_bin_op)) ["+." ; "-." ; "*." ; "/."] ;
+    List.map (fun id -> Sig_value (Ident.create id, bool_bin_op)) ["&&" ; "||"] ;
+    List.map (fun id -> Sig_value (Ident.create id, cmp_bin_op)) ["=" ; "<" ; ">" ; "<=" ; "=<" ; "<>"] ;
+    List.map (fun id -> Sig_value (Ident.create id, float_float_function_type)) float_float_function_list
+  ]
 
 (** Add the module Pervasives to the environment *)
 let add_pervasives env =
