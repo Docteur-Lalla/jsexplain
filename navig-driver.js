@@ -177,23 +177,6 @@ function setExample(idx) {
 
 // --------------- Predicate search ----------------
 
-function jsvalue_of_prim(v) {
-  switch (v.tag) {
-  case "Coq_prim_undef":
-    return undefined;
-  case "Coq_prim_null":
-    return null;
-  case "Coq_prim_bool":
-    return (v.value) ? true : false;
-  case "Coq_prim_number":
-    return v.value;
-  case "Coq_prim_string":
-    return v.value;
-  default:
-    throw "unrecognized tag in jsvalue_of_prim";
-  }
-}
-
 function jsvalue_of_value(v) {
   switch (v.tag) {
      case "Coq_value_prim":
@@ -833,23 +816,6 @@ function show_execution_ctx(state, execution_ctx, target) {
 
 // --------------- Views for interpreter context ----------------
 
-/*
-function updateContext(targetid, state, env) {
- $(targetid).html("");
- if (env === undefined)
-   return;
- if (state === undefined)
-   return;
- array_of_env(env).map(function(env){
-   var target = fresh_id();
-   $(targetid).append("<div id='" + target + "'></div>");
-   $("#" + target).html(env.name + ": ");
-   var depth = 1;
-   show_value(state, env.val, target, depth);
- });
-}
-*/
-
 function has_tag_in_set(value, array_tags) {
   return (value.tag !== undefined &&
           array_tags.indexOf(value.tag) != -1);
@@ -862,19 +828,6 @@ function interp_val_is_base_value(val) {
          t == "boolean" ||
          t == "undefined" ||
          t == "null";
-}
-
-function interp_val_is_js_prim(v) {
-  return has_tag_in_set(v, [ "Coq_prim_undef", "Coq_prim_null", "Coq_prim_bool", "Coq_prim_number", "Coq_prim_string" ]);
-  // return has_tag_in_set(vn ["Literal_int", "Literal_float"]);
-}
-
-function interp_val_is_js_value(v) {
-  return has_tag_in_set(v, ["Coq_value_prim", "Coq_value_object" ]);
-}
-
-function interp_val_is_loc(v) {
-  return has_tag_in_set(v, [ "Coq_object_loc_normal", "Coq_object_loc_prealloc" ]);
 }
 
 function interp_val_is_list(v) {
