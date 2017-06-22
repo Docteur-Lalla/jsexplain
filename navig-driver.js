@@ -786,13 +786,15 @@ function show_module_contents(state, ctx, name, depth) {
       else
         value = binding.normal_alloc;
 
-      var res = indent + name + " = ";
+      var res = "<li>" + name + " = ";
       res += string_of_ml_value(value);
-      res += "<br/>";
+      res += "</li>";
       return acc + res;
     }
 
-    var res = MLList.foldl(show_binding, "", md.value.bindings);
+    var res = "<ul>";
+    res += MLList.foldl(show_binding, "", md.value.bindings);
+    res += "</ul>";
     return res;
   }
 
@@ -844,7 +846,23 @@ function show_execution_ctx(state, execution_ctx, target) {
   if(modules.tag != "[]") {
     t.append("<br/><strong>Opened modules :</strong>");
     var buf = "<ul>";
-    
+
+    var populate_handlers = function(obj_target, head_id) {
+      var handler_close = function() {
+        handlers[obj_target] = handler_open;
+        $('#' + obj_target).html("");
+        interpreter.focus();
+      }
+
+      var handler_open = function() {
+        handlers[obj_target] = handler_close;
+        $('#' + obj_target).html("<br/>" + show_module_contents(state, execution_ctx, head_id, 1));
+        interpreter.focus();
+      }
+
+      handlers[obj_target] = handler_open;
+    }
+
     while(modules.tag != "[]") {
       var obj_target = fresh_id();
       var head_id = modules.head.id;
@@ -854,21 +872,7 @@ function show_execution_ctx(state, execution_ctx, target) {
         + "style=\"padding-left: 1em;\"></span></li>";
       modules = modules.tail;
 
-      function handler_close() {
-        handlers[obj_target] = handler_open;
-        $('#' + obj_target).html("");
-        interpreter.focus();
-      }
-
-      function handler_open() {
-        handlers[obj_target] = handler_close;
-        $('#' + obj_target).html("<br/>" + show_module_contents(state, execution_ctx, head_id, 1));
-        interpreter.focus();
-      }
-
-      handlers[obj_target] = handler_open;
-      console.log(obj_target);
-      console.log(handlers[obj_target]);
+      populate_handlers(obj_target, head_id);
     }
 
     buf += "</ul>";
