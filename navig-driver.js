@@ -759,6 +759,47 @@ function show_value(state, v, target, depth) {
   t.append(string_of_ml_value(v));
 }
 
+function show_module_content(state, ctx, name, depth) {
+  var md_nsf = MLInterpreter.run_ident(state, ctx, name);
+  if (md_nsf.tag == "Result") {
+    var md = md_nsf.result;
+    var indent = "  ".repeat(depth);
+
+    var show_binding = function(acc, pair) {
+      var name = pair.key;
+      var idx = pair.value;
+      var binding = Vector.get(state, idx);
+      var value = undefined;
+
+      if(binding === undefined)
+        return;
+
+      if(binding.tag == "Prealloc") {
+        var value_opt = MLInterpreter.run_expression(state, ctx, binding.prealloc);
+
+        if(value_opt.tag == "Result")
+          value = value_opt.result;
+        else
+          return;
+      }
+
+      else
+        value = binding.normal_alloc;
+
+      var res = indent + name + " = ";
+      res += string_of_ml_value(value);
+      res += "<br/>";
+      return acc + res;
+    }
+
+    var res = MLList.foldl(show_binding, "", md.value.bindings);
+    return res;
+  }
+
+  else
+    return "";
+}
+
 function show_execution_ctx(state, execution_ctx, target) {
   var t = $("#" + target);
   var lex_env = execution_ctx.execution_ctx_lexical_env;
@@ -806,6 +847,9 @@ function show_execution_ctx(state, execution_ctx, target) {
     
     while(modules.tag != "[]") {
       buf += "<li>" + show_module_name(modules.head.id) + "</li>";
+      /*buf += '<br/><div style="padding-left: 1em;">'
+        + show_module_content(state, execution_ctx, modules.head.id, 1)
+        + "</div></li>";*/
       modules = modules.tail;
     }
 
@@ -844,7 +888,8 @@ function interp_val_is_syntax(v) {
     "Pattern_variant", "Pattern_alias", "Pattern_constructor", "Pattern_or",
     "Structure_eval", "Structure_value", "Structure_type", "Structure_module", "Structure_modtype",
     "Structure_include", "Structure_primitive", "Structure_open",
-    "Module_ident", "Module_structure", "Module_functor", "Module_apply", "Module_constraint"]);
+    "Module_ident", "Module_structure", "Module_functor", "Module_apply", "Module_constraint",
+    "Structure"]);
 }
 
 function interp_val_is_state(v) {
