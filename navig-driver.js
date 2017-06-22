@@ -205,20 +205,6 @@ function jsvalue_of_value(v) {
   }
 }
 
-function lookup_var_in_record_decl(name, env_record_decl) {
-  var ro = HeapStr.read_option(env_record_decl, name);
-  switch (ro.tag) {
-    case "None":
-      return undefined;
-    case "Some":
-      var r = ro.value;
-      var mutability = r[0];
-      var value = r[1];
-      return value;
-    default:
-      throw "unrecognized tag in lookup_var_in_record_decl";
-  }
-}
   /* DEPRECATED, naive code for lookup_var_in_record_decl:
    var items_array = array_of_heap(env_record_decl);
    for (var i = 0; i < items_array.length; i++) {
@@ -688,33 +674,6 @@ function string_of_any(v) {
 
 // --------------- Views for JS state/context ----------------
 
-/*
-function array_of_heap(compare, heap) {
-  var items_list = Heap.to_list(compare, heap);
-  return encoded_list_to_array(items_list);
-}
-*/
-
-
-function string_of_prealloc(prealloc) {
-    return (prealloc.tag).slice("Coq_prealloc_".length);
-  //TODO:
-  // Coq_prealloc_mathop  [@f mathop] of mathop
-  // Coq_prealloc_native_error  [@f error] of native_error
-  // Coq_prealloc_native_error_proto  [@f error] of native_error
-}
-
-function string_of_loc(loc) {
-  switch (loc.tag) {
-  case "Coq_object_loc_normal":
-    return loc.address;
-  case "Coq_object_loc_prealloc":
-    return string_of_prealloc(loc.prealloc);
-  default:
-    throw "unrecognized tag in string_of_loc";
-  }
-}
-
 function string_of_option(string_of_elem, opt_elem) {
   switch (opt_elem.tag) {
   case "None":
@@ -726,152 +685,95 @@ function string_of_option(string_of_elem, opt_elem) {
   }
 }
 
-function string_of_mutability(mutability) {
-  return (mutability.tag).slice("Coq_mutability_".length);
-}
-
-
-  /*
-  type coq_object = { object_proto_ : value;
-                    object_class_ : class_name;
-                    object_extensible_ : bool;
-                    object_prim_value_ : value option;
-                    object_properties_ : object_properties_type;
-                    object_get_ : builtin_get;
-                    object_get_own_prop_ : builtin_get_own_prop;
-                    object_get_prop_ : builtin_get_prop;
-                    object_put_ : builtin_put;
-                    object_can_put_ : builtin_can_put;
-                    object_has_prop_ : builtin_has_prop;
-                    object_delete_ : builtin_delete;
-                    object_default_value_ : builtin_default_value;
-                    object_define_own_prop_ : builtin_define_own_prop;
-                    object_construct_ : construct option;
-                    object_call_ : call option;
-                    object_has_instance_ : builtin_has_instance option;
-                    object_scope_ : lexical_env option;
-                    object_formal_parameters_ : string list option;
-                    object_code_ : funcbody option;
-                    object_target_function_ : object_loc option;
-                    object_bound_this_ : value option;
-                    object_bound_args_ : value list option;
-                    object_parameter_map_ : object_loc option }
-                    */
-   // TODO  for object_prim_value_, use string_of_option(show_elem, opt_elem)
-/*
-    type attributes =
-    | Coq_attributes_data_of [@f value] of attributes_data
-    | Coq_attributes_accessor_of [@f value] of attributes_accessor
-
-
-    type attributes_data = { attributes_data_value : value;
-                             attributes_data_writable : bool;
-                             attributes_data_enumerable : bool;
-                             attributes_data_configurable : bool }
-
-    type attributes_accessor = { attributes_accessor_get : value;
-                                 attributes_accessor_set : value;
-                                 attributes_accessor_enumerable : bool;
-                                 attributes_accessor_configurable : bool }
-*/
-
-function show_value(state, v, target, depth) {
-  var t = $("#" + target);
-
+function string_of_ml_value(v) {
   var sepBy = function(sep) {
     return function(fst, value) {
-      t.append(sep);
-      show_value(state, value, target, depth);
+      var res = fst + sep;
+      res += string_of_ml_value(value);
+      return res;
     };
   };
 
   switch(v.tag) {
     case "Value_int":
     case "Value_float":
-      t.append(v.value);
-      break;
+      return v.value;
     case "Value_char":
-      t.append("'" + v.value + "'");
-      break;
+      return "'" + v.value + "'";
     case "Value_string":
-      t.append('"' + v.value + '"');
-      break;
+      return '"' + v.value + '"';
     case "Value_tuple":
-      t.append("( ");
-      show_value(state, v.value[0], target, depth);
-      MLArray.fold(sepBy(", "), undefined, v.value.slice(1));
-      t.append(" )");
-      break;
+      var res = "(";
+      var v0_str = string_of_ml_value(v.value[0]);
+      res += MLArray.fold(sepBy(", "), v0_str, v.value.slice(1));
+      res += ")";
+      return res;
     case "Value_array":
-      t.append("[| ");
-      show_value(state, v.value[0], target, depth);
-      MLArray.fold(sepBy(" ; "), undefined, v.value.slice(1));
-      t.append(" |]");
-      break;
+      var res = "[|";
+      if(v.value.length > 0) {
+        var v0_str = string_of_ml_value(v.value[0]);
+        res += MLArray.fold(sepBy(" ; "), v0_str, v.value.slice(1));
+      }
+      res += "|]";
+      return res;
     case "Value_fun":
-      t.append("&lt;function&gt;");
-      break;
+      return html_escape("<function>");
     case "Value_variant":
-      t.append("`" + v.value.label + " ");
+      var res = "`" + v.value.label;
       var opt = v.value.value_opt;
       if(opt.tag == "Some" && opt.value.tag == "Result") {
+        res += " ";
         var result = opt.value.result;
-        if(result.tag == "Value_variant" || result.tag == "Value_custom") {
-          t.append("(");
-          show_value(state, result, target, depth);
-          t.append(")");
-        }
+        if(result.tag == "Value_variant" || result.tag == "Value_custom")
+          res += "(" + string_of_ml_value(result) + ")";
         else
-          show_value(state, value, target, depth);
+          res += string_of_ml_value(result);
       }
-      break;
+      return res;
     case "Value_custom":
       switch(v.value.tag) {
         case "Sumtype":
           var sum = v.value.sumtype;
-          t.append(sum.constructor + " ");
+          var res = sum.constructor;
           if(sum.args.length > 1) {
-            t.append("( ");
-            show_value(state, sum.args[0], target, depth);
-            MLArray.fold(sepBy(", "), undefined, sum.args.slice(1));
-            t.append(" )");
+            res += " ( ";
+            var v0_str = string_of_ml_value(v.value[0]);
+            res += MLArray.fold(sepBy(", "), v0_str, sum.args.slice(1));
+            res += " )";
           }
 
           else if(sum.args.length == 1) {
-            if(sum.args[0].tag == "Value_variant" || sum.args[0].tag == "Value_custom") {
-              t.append("(");
-              show_value(state, sum.args[0], target, depth);
-              t.append(")");
-            }
-            
+            if(sum.args[0].tag == "Value_variant" || sum.args[0].tag == "Value_custom")
+              res += "(" + string_of_ml_value(v.value[0]) + ")";
             else
-              show_value(state, sum.args[0], target, depth);
+              res += string_of_ml_value(v.value[0]);
           }
-          break;
+          return res;
         case "Record":
           var rec = v.value.record;
-          t.append("{ ");
+          var res = "{ ";
           var map = Map.map(function(idx) { return Vector.get(state, idx); }, rec).bindings;
           var show = function(fst, pair) {
-            t.append(" ; " + pair.key + " = ");
-            show_value(state, pair.value.normal_alloc, target, depth);
+            res += " ; " + pair.key + " = ";
+            res += string_of_ml_value(pair.value.normal_alloc);
           }
 
-          t.append(map.head.key + " = ");
-          show_value(state, map.head.value.normal_alloc, target, depth);
-          MLList.foldl(show, undefined, map.tail);
-          t.append(" }");
+          res += map.head.key + " = ";
+          var v0_str = map.head.value.normal_alloc;
+          res += MLList.foldl(show, v0_str, map.tail);
+          res += " }";
+          return res;
       }
-      break;
     case "Value_struct":
-      t.append("&lt;module structure&gt;");
-      break;
+      return html_escape("<module structure>");
     case "Value_functor":
-      t.append("&lt;functor&gt;");
-      break;
-    default:
-      throw "unrecognized tag in show_value";
+      return html_escape("<functor>");
   }
+}
+
+function show_value(state, v, target, depth) {
+  var t = $("#" + target);
+  t.append(string_of_ml_value(v));
 }
 
 function show_execution_ctx(state, execution_ctx, target) {
@@ -1002,6 +904,11 @@ function interp_val_is_execution_ctx(v) {
   return v.execution_ctx_lexical_env !== undefined;
 }
 
+function interp_val_is_ml_value(v) {
+  return has_tag_in_set(v, ["Value_int", "Value_float", "Value_char", "Value_string",
+    "Value_tuple", "Value_list", "Value_array", "Value_fun", "Value_variant", "Value_struct",
+    "Value_functor", "Value_custom", "Value_exception"]);
+}
 
 function show_interp_val(state, v, target, depth) {
   if (depth == 0) {
@@ -1013,12 +920,8 @@ function show_interp_val(state, v, target, depth) {
       v = "\"" + v + "\"";
     }
     t.append(html_escape("" + v));
-  } else if (interp_val_is_loc(v)) {
-    show_object(state, v, target, 0);
-  } else if (interp_val_is_js_value(v)) {
-    show_value(state, v, target, 0);
-  } else if (interp_val_is_js_prim(v)) {
-    t.append(string_of_prim(v));
+  } else if (interp_val_is_ml_value(v)) {
+    t.append(string_of_ml_value(v));
   } else if (interp_val_is_state(v)) {
     t.append("&lt;state-object&gt;"); 
   } else if (interp_val_is_execution_ctx(v)) {
