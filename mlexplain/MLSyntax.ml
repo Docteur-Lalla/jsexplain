@@ -46,6 +46,8 @@ type expression =
 | Expression_while of location * expression * expression [@f loc, cond, body]
 | Expression_for of location * string * expression * expression * bool * expression [@f loc, id, first, last, up, body]
 | Expression_try of location * expression * case array [@f loc, expr, cases]
+| Expression_letmodule of location * Identifier.t * module_expression * expression [@f loc, id, modex, expr]
+| Expression_pack of location * module_expression [@f loc, expr]
 
 and pattern =
 | Pattern_any of location [@f loc]
@@ -88,3 +90,4 @@ and module_expression =
 | Module_functor of location * string * module_expression [@f loc, id, expr]
 | Module_apply of location * module_expression * module_expression [@f loc, func, expr]
 | Module_constraint of location * module_expression [@f loc, expr]
+| Module_unpack of location * expression [@f loc, expr]

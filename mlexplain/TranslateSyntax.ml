@@ -144,6 +144,14 @@ let rec translate_expression file e =
     } in
     let cases = Array.of_list (List.map map_f cs) in
     Expression_try (loc, expr, cases)
+  | Texp_letmodule (id, _, md_exp, e) ->
+    let ident = Identifier.Lident id.name in
+    let modex = translate_module_expression file md_exp in
+    let expr = translate_expression file e in
+    Expression_letmodule (loc, ident, modex, expr)
+  | Texp_pack e ->
+    let expr = translate_module_expression file e in
+    Expression_pack (loc, expr)
 
 and translate_pattern file p =
   let loc = translate_location file p.pat_loc in
@@ -225,6 +233,9 @@ and translate_module_expression file m =
   | Tmod_constraint (e, _, _, _) ->
     let expr = translate_module_expression file e in
     Module_constraint (loc, expr)
+  | Tmod_unpack (e, _) ->
+    let expr = translate_expression file e in
+    Module_unpack (loc, expr)
 
 and translate_structure file s =
   let items = Array.of_list (List.map (translate_structure_item file) s.str_items) in
@@ -378,6 +389,16 @@ let rec js_of_expression = function
   let js_expr = js_of_expression expr in
   let js_cases = Js.Unsafe.inject (Js.array (Array.map js_of_case cases)) in
   ctor_call "MLSyntax.Expression_try" [| js_loc ; js_expr ; js_cases |]
+| Expression_letmodule (loc, id, modex, expr) ->
+  let js_loc = js_of_location loc in
+  let js_id = js_of_identifier id in
+  let js_modex = js_of_module_expression modex in
+  let js_expr = js_of_expression expr in
+  ctor_call "MLSyntax.Expression_letmodule" [| js_loc ; js_id ; js_modex ; js_expr |]
+| Expression_pack (loc, expr) ->
+  let js_loc = js_of_location loc in
+  let js_expr = js_of_module_expression expr in
+  ctor_call "MLSyntax.Expression_pack" [| js_loc ; js_expr |]
 
 and js_of_pattern = function
 | Pattern_any loc ->
@@ -489,6 +510,10 @@ and js_of_module_expression = function
   let js_loc = js_of_location loc in
   let js_expr = js_of_module_expression expr in
   ctor_call "MLSyntax.Module_constraint" [| js_loc ; js_expr |]
+| Module_unpack (loc, expr) ->
+  let js_loc = js_of_location loc in
+  let js_expr = js_of_expression expr in
+  ctor_call "MLSyntax.Module_unpack" [| js_loc ; js_expr |]
 
 and js_of_structure = function
 | Structure (loc, items) ->

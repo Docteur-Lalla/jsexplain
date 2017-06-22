@@ -217,6 +217,13 @@ and run_expression s ctx _term_ = match _term_ with
     | Unsafe.Exception x -> pattern_match_many s ctx x (MLList.of_array cases)
     | _ -> ret
   end
+| Expression_letmodule (_, id, modex, expr) ->
+  let%result md = run_module_expression s ctx modex in
+  let ident = string_of_identifier id in
+  let idx = Vector.append s (Normal md) in
+  let ctx' = ExecutionContext.add ident idx ctx in
+  run_expression s ctx' expr
+| Expression_pack (_, expr) -> run_module_expression s ctx expr
 
 (** Get the actual value held by the binding b *)
 and value_of s ctx b = match b with
@@ -330,7 +337,7 @@ and pattern_match_array s ctx ary patts =
       Unsafe.bind ctx_nsf some_case_func in
    for_loop (Unsafe.box ctx) 0
 
-let rec run_structure_item s ctx _term_ = match _term_ with
+and run_structure_item s ctx _term_ = match _term_ with
 | Structure_eval (_, e) ->
   let%result v = run_expression s ctx e in
   Unsafe.box { value = v ; ctx = ctx }
@@ -424,6 +431,7 @@ and run_module_expression s ctx _term_ = match _term_ with
     | _ -> Unsafe.error "Expected a functor"
   end
 | Module_constraint (_, expr) -> run_module_expression s ctx expr
+| Module_unpack (_, expr) -> run_expression s ctx expr
 
 and run_structure s ctx _term_ =
   let func nsf _term_ =

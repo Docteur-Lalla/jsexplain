@@ -4,7 +4,6 @@ type value =
 | Value_char of char [@f value]
 | Value_string of string [@f value]
 | Value_tuple of value array [@f value]
-| Value_list of value list [@f value]
 | Value_array of value array [@f value]
 | Value_fun of (value -> value Unsafe.value) [@f value]
 | Value_variant of variant [@f value]
