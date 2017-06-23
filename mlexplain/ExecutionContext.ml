@@ -4,7 +4,8 @@ type opened_module = {
   map : (string, int) Map.map
 }
 
-(** Type holding the current context and a list of the opened modules *)
+(** Type holding the current context and a list of the opened modules.
+ * A context associates a name to an index in the program's state (see Vector.js) *)
 type execution_ctx = {
   execution_ctx_lexical_env : (string, int) Map.map ;
   opened_modules : opened_module list

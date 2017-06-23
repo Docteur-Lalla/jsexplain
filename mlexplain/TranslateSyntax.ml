@@ -8,7 +8,7 @@ open Typedtree
 open MLSyntax
 
 (***************************************************************************************
- * Translation from an OCaml-side AST to a JS-side one
+ * Translation from a Typedtree to a MLExplain AST
  ***************************************************************************************)
 
 let rec translate_ident = function
@@ -96,12 +96,14 @@ let rec translate_expression file e =
     let args = Array.of_list (List.map (translate_expression file) exprs) in
     Expression_constructor (loc, translate_ident ctor, args)
   | Texp_record r ->
-    let conv  (lbl, rec_def) = match rec_def with
+    (* Convert a record-attribute binding from compiler-libs representation to MLExplain one *)
+    let conv (lbl, rec_def) = match rec_def with
     | Overridden (_, expr) -> { name = lbl.lbl_name ; expr = translate_expression file expr }
     | Kept _ -> { name = "" ; expr = Expression_constant (loc, Constant_integer 0) } in
     let bindings =
       let mapped = Array.map conv r.fields in
       let lst = Array.to_list mapped in
+      (* Kept attributes are remove from the list since they are retrieved from r.extended_expression *)
       let clean_lst = List.filter (fun b -> b.name <> "") lst in
       Array.of_list clean_lst in
     let base' = Option.bind r.extended_expression (fun base -> Some (translate_expression file base)) in
@@ -545,26 +547,40 @@ let () =
       let filename = Js.to_string name in
       let s = Js.to_string str in
       let lexbuffer = from_string s in
-      let past = Parse.implementation lexbuffer in
-      (* Create a location for the entire structure *)
-      let structure_loc = function
-      | [] -> Location.none
-      | start :: [] -> start.pstr_loc
-      | start :: rest ->
-        match List.rev rest with
-        | last :: _ -> {
-            loc_start = start.pstr_loc.loc_start ;
-            loc_end = last.pstr_loc.loc_end ;
-            loc_ghost = false
-          }
-        | [] -> Location.none (* absurd *) in
-      let (env, _) = Predef.build_initial_env
-        (Env.add_type ~check:true) (Env.add_extension ~check:true) Env.empty in
-      let id = Ident.create "Pervasives" in
-      let env' = env
-        |> Primitives.add_pervasives
-        |> Env.open_signature Asttypes.Fresh (Path.Pident id) (Primitives.pervasives_sign) in
-      let (typed_ast, _, _) = Typemod.type_structure env' past (structure_loc past) in
-      let struct_ = translate_structure filename typed_ast in
-      js_of_structure struct_
+      try
+        let past = Parse.implementation lexbuffer in
+        (* Create a location for the entire structure *)
+        let structure_loc = function
+        | [] -> Location.none
+        | start :: [] -> start.pstr_loc
+        | start :: rest ->
+          match List.rev rest with
+          | last :: _ -> {
+              loc_start = start.pstr_loc.loc_start ;
+              loc_end = last.pstr_loc.loc_end ;
+              loc_ghost = false
+            }
+          | [] -> Location.none (* absurd *) in
+        let (env, _) = Predef.build_initial_env
+          (Env.add_type ~check:true) (Env.add_extension ~check:true) Env.empty in
+        let id = Ident.create "Pervasives" in
+        let env' = env
+          |> Primitives.add_pervasives
+          |> Env.open_signature Asttypes.Fresh (Path.Pident id) (Primitives.pervasives_sign) in
+        let (typed_ast, _, _) = Typemod.type_structure env' past (structure_loc past) in
+        let struct_ = translate_structure filename typed_ast in
+        js_of_structure struct_
+      with
+      | Typemod.Error (_, env, err) as exc ->
+        Typemod.report_error env Format.str_formatter err ;
+        print_endline (Format.flush_str_formatter ()) ;
+        raise exc
+      | Typecore.Error (_, env, err) as exc ->
+        Typecore.report_error env Format.str_formatter err ;
+        print_endline (Format.flush_str_formatter ()) ;
+        raise exc
+      | Typetexp.Error (_, env, err) as exc ->
+        Typetexp.report_error env Format.str_formatter err ;
+        print_endline (Format.flush_str_formatter ()) ;
+        raise exc
   end)
