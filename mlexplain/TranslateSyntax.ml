@@ -544,8 +544,10 @@ let () =
 
     (** Parse an OCaml file *)
     method parseStructure name str =
+      (* Parse the filename and the code from JS representation *)
       let filename = Js.to_string name in
       let s = Js.to_string str in
+      (* Lexical analysis *)
       let lexbuffer = from_string s in
       try
         let past = Parse.implementation lexbuffer in
@@ -561,15 +563,19 @@ let () =
               loc_ghost = false
             }
           | [] -> Location.none (* absurd *) in
+        (* Build the initial environment *)
         let (env, _) = Predef.build_initial_env
           (Env.add_type ~check:true) (Env.add_extension ~check:true) Env.empty in
+        (* Put it all in the Pervasives module and open it *)
         let id = Ident.create "Pervasives" in
         let env' = env
           |> Primitives.add_pervasives
           |> Env.open_signature Asttypes.Fresh (Path.Pident id) (Primitives.pervasives_sign) in
+        (* Type the AST *)
         let (typed_ast, _, _) = Typemod.type_structure env' past (structure_loc past) in
         let struct_ = translate_structure filename typed_ast in
         js_of_structure struct_
+      (* Error management *)
       with
       | Typemod.Error (_, env, err) as exc ->
         Typemod.report_error env Format.str_formatter err ;
