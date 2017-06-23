@@ -531,16 +531,26 @@ let () =
       let filename = Js.to_string name in
       let s = Js.to_string str in
       let lexbuffer = from_string s in
-      let past = Parse.expression lexbuffer in
-      let (env, _) = Predef.build_initial_env
-        (Env.add_type ~check:true) (Env.add_extension ~check:true) Env.empty in
-      let id = Ident.create "Pervasives" in
-      let env' = env
-        |> Primitives.add_pervasives
-        |> Env.open_signature Asttypes.Fresh (Path.Pident id) (Primitives.pervasives_sign) in
-      let typed_ast = Typecore.type_expression env' past in
-      let ast = translate_expression filename typed_ast in
-      js_of_expression ast
+      try
+        let past = Parse.expression lexbuffer in
+        let (env, _) = Predef.build_initial_env
+          (Env.add_type ~check:true) (Env.add_extension ~check:true) Env.empty in
+        let id = Ident.create "Pervasives" in
+        let env' = env
+          |> Primitives.add_pervasives
+          |> Env.open_signature Asttypes.Fresh (Path.Pident id) (Primitives.pervasives_sign) in
+        let typed_ast = Typecore.type_expression env' past in
+        let ast = translate_expression filename typed_ast in
+        js_of_expression ast
+      with
+      | Typecore.Error (_, env, err) as exc ->
+        Typecore.report_error env Format.str_formatter err ;
+        print_endline (Format.flush_str_formatter ()) ;
+        raise exc
+      | Typetexp.Error (_, env, err) as exc ->
+        Typetexp.report_error env Format.str_formatter err ;
+        print_endline (Format.flush_str_formatter ()) ;
+        raise exc
 
     (** Parse an OCaml file *)
     method parseStructure name str =
