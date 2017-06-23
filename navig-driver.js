@@ -720,16 +720,16 @@ function string_of_ml_value(v) {
           var res = sum.constructor;
           if(sum.args.length > 1) {
             res += " ( ";
-            var v0_str = string_of_ml_value(v.value[0]);
+            var v0_str = string_of_ml_value(sum.args[0]);
             res += MLArray.fold(sepBy(", "), v0_str, sum.args.slice(1));
             res += " )";
           }
 
           else if(sum.args.length == 1) {
             if(sum.args[0].tag == "Value_variant" || sum.args[0].tag == "Value_custom")
-              res += "(" + string_of_ml_value(v.value[0]) + ")";
+              res += " (" + string_of_ml_value(sum.args[0]) + ")";
             else
-              res += string_of_ml_value(v.value[0]);
+              res += " " + string_of_ml_value(sum.args[0]);
           }
           return res;
         case "Record":
@@ -751,6 +751,8 @@ function string_of_ml_value(v) {
       return html_escape("<module structure>");
     case "Value_functor":
       return html_escape("<functor>");
+    case "Value_exception":
+      return string_of_ml_value({tag: "Value_custom", value: {tag: "Sumtype", sumtype: v.value}});
   }
 }
 
@@ -930,6 +932,10 @@ function interp_val_is_ml_value(v) {
     "Value_functor", "Value_custom", "Value_exception"]);
 }
 
+function interp_val_is_result(v) {
+  return has_tag_in_set(v, ["Result", "Exception", "Error"]);
+}
+
 function show_interp_val(state, v, target, depth) {
   if (depth == 0) {
     t.append("&lt; ... &gt;"); 
@@ -945,7 +951,24 @@ function show_interp_val(state, v, target, depth) {
   } else if (interp_val_is_state(v)) {
     t.append("&lt;state-object&gt;"); 
   } else if (interp_val_is_execution_ctx(v)) {
-    t.append("&lt;execution-ctx-object&gt;"); 
+    var obj_target = fresh_id();
+    t.append('<a onclick="handlers[\''
+      + obj_target
+      + '\']()">&lt;execution-ctx-object&gt;</a><div style="padding-left: 1em" id="'
+      + obj_target
+      + '"></div>');
+
+    function handler_open() {
+      handlers[obj_target] = handler_close;
+      show_execution_ctx(state, v, obj_target, depth-1);
+    }
+
+    function handler_close() {
+      handlers[obj_target] = handler_open;
+      $('#' + obj_target).html("");
+    }
+
+    handlers[obj_target] = handler_open;
   } else if (interp_val_is_syntax(v)) {
     t.append("&lt;syntax-object&gt;");  // + JSON.stringify(v)
   } else if (interp_val_is_list(v)) {
@@ -958,6 +981,20 @@ function show_interp_val(state, v, target, depth) {
         $("#" + targetsub).html("&bull; "); 
         show_interp_val(state, vi, targetsub, depth-1);
       }
+  } else if (interp_val_is_result(v)) {
+    switch (v.tag) {
+      case "Result":
+        t.append("Result: ");
+        show_interp_val(state, v.result, target, depth);
+        break;
+      case "Exception":
+        t.append("Exception: ");
+        show_interp_val(state, v.except, target, depth);
+        break;
+      case "Error":
+        t.append("Error: " + v.error);
+        break;
+    }
   } else if (v.tag !== undefined) { // data constructor
       var constr = html_escape(v.tag); // TODO: rename constructor prefix
       var hasArgs = (function() {
