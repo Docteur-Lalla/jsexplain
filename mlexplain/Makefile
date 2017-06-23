@@ -42,8 +42,8 @@ ASSEMBLY_JS_FILES := \
 	Identifier.unlog.js \
 	MLSyntax.unlog.js \
 	Vector.js \
-	Value.unlog.js \
 	ExecutionContext.unlog.js \
+	Value.unlog.js \
 	MLInterpreter.log.js
 
 ASSEMBLY_JS := \

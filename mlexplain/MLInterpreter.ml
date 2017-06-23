@@ -61,8 +61,9 @@ and run_expression s ctx _term_ = match _term_ with
     let%result id_ary = MLArray.lift_unsafe (MLArray.map prealloc patts) in
     let ids = MLList.of_array id_ary in
     let func ctx id exp =
-      let idx = Vector.append s (Prealloc exp) in
-      ExecutionContext.add id idx ctx in
+      let idx = Vector.append s (Prealloc (exp, ctx)) in
+      let ctx' = ExecutionContext.add id idx ctx in
+      Vector.set s idx (Prealloc (exp, ctx')) ; ctx' in
     (* Add the identifiers to the current context *)
     let ctx' = MLList.foldl2 func ctx ids exps in
     run_expression s ctx' e2
@@ -228,7 +229,7 @@ and run_expression s ctx _term_ = match _term_ with
 (** Get the actual value held by the binding b *)
 and value_of s ctx b = match b with
 | Normal v -> Unsafe.box v
-| Prealloc e -> run_expression s ctx e
+| Prealloc (e, ctx') -> run_expression s ctx' e
 
 and pattern_match s ctx value patt = match patt with
 | Pattern_any _ -> Unsafe.box ctx
@@ -354,8 +355,9 @@ and run_structure_item s ctx _term_ = match _term_ with
     let ids = MLList.of_array id_ary in
     (* Auxiliary function adding a Prealloc of exp bound to id in the given context *)
     let func ctx id exp =
-      let idx = Vector.append s (Prealloc exp) in
-      ExecutionContext.add id idx ctx in
+      let idx = Vector.append s (Prealloc (exp, ctx)) in
+      let ctx' = ExecutionContext.add id idx ctx in
+      Vector.set s idx (Prealloc (exp, ctx')) ; ctx' in
     (* Foldl of the lists simultaneously using func and the current context *)
     let ctx' = MLList.foldl2 func ctx ids exps in
     (* Return the last value bound by this toplevel phrase *)

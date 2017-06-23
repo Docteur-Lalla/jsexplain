@@ -32,7 +32,7 @@ and record = (string, int) Map.map
 (** Type used two handle bindings, Prealloc is useful for recursive functions *)
 type binding =
 | Normal of value [@f normal_alloc]
-| Prealloc of MLSyntax.expression [@f prealloc]
+| Prealloc of MLSyntax.expression * ExecutionContext.execution_ctx [@f prealloc, ctx]
 
 (** Apply the function to the sumtype if the value is one *)
 let do_sumtype value func = match value with
