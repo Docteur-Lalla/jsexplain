@@ -988,12 +988,14 @@ function show_interp_val(state, v, target, depth) {
     t.append("&lt;state-object&gt;"); 
   } else if (interp_val_is_execution_ctx(v)) {
     var obj_target = fresh_id();
+    /* Make the <execution-ctx-object> a link to display its contents */
     t.append('<a onclick="handlers[\''
       + obj_target
       + '\']()">&lt;execution-ctx-object&gt;</a><div style="padding-left: 1em" id="'
       + obj_target
       + '"></div>');
 
+    /* Create handlers to expand the link and display the context contents */
     function handler_open() {
       handlers[obj_target] = handler_close;
       show_execution_ctx(state, v, obj_target, depth-1);
@@ -1006,7 +1008,27 @@ function show_interp_val(state, v, target, depth) {
 
     handlers[obj_target] = handler_open;
   } else if (interp_val_is_syntax(v)) {
-    t.append("&lt;syntax-object&gt;");  // + JSON.stringify(v)
+    var obj_target = fresh_id();
+    /* Make the <syntax-object> a link to display its contents */
+    t.append('<a onclick="handlers[\''
+      + obj_target
+      + '\']()">&lt;syntax-object&gt;</a><div style="padding-left: 1em" id="'
+      + obj_target
+      + '"></div>');
+
+    /* Create handlers to expand the link and display the context contents */
+    function handler_open() {
+      handlers[obj_target] = handler_close;
+      $('#' + obj_target).html(JSON.stringify(v));
+    }
+
+    function handler_close() {
+      handlers[obj_target] = handler_open;
+      $('#' + obj_target).html("");
+    }
+
+    handlers[obj_target] = handler_open;
+    // t.append("&lt;syntax-object&gt;");  // + JSON.stringify(v)
   } else if (interp_val_is_list(v)) {
       var items = encoded_list_to_array(v)
       t.append("List:");
