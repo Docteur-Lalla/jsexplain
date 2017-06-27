@@ -784,12 +784,14 @@ function show_value(state, v, target, depth) {
   t.append(string_of_ml_value(v));
 }
 
+/** Make a string from the contents of the module corresponding to the given name in ctx */
 function show_module_contents(state, ctx, name, depth) {
   var md_nsf = MLInterpreter.run_ident(state, ctx, name);
   if (md_nsf.tag == "Result") {
     var md = md_nsf.result;
     var indent = "  ".repeat(depth);
 
+    /* Make a string from a pair of name and allocation */
     var show_binding = function(acc, pair) {
       var name = pair.key;
       var idx = pair.value;
@@ -799,6 +801,7 @@ function show_module_contents(state, ctx, name, depth) {
       if(binding === undefined)
         return;
 
+      /* Get the value from the allocation */
       if(binding.tag == "Prealloc") {
         var value_opt = MLInterpreter.run_expression(state, ctx, binding.prealloc);
 
@@ -811,12 +814,14 @@ function show_module_contents(state, ctx, name, depth) {
       else
         value = binding.normal_alloc;
 
+      /* Make the string */
       var res = "<li>" + name + " = ";
       res += string_of_ml_value(value);
       res += "</li>";
       return acc + res;
     }
 
+    /* Make a list from the stringified bindings */
     var res = "<ul>";
     res += MLList.foldl(show_binding, "", md.value.bindings);
     res += "</ul>";
@@ -827,10 +832,12 @@ function show_module_contents(state, ctx, name, depth) {
     return "";
 }
 
+/** Display the execution context in the given target */
 function show_execution_ctx(state, execution_ctx, target) {
   var t = $("#" + target);
   var lex_env = execution_ctx.execution_ctx_lexical_env;
 
+  /* Show the pair of name and allocation */
   var show_binding = function(pair) {
     var name = pair.key;
     var idx = pair.value;
@@ -840,6 +847,7 @@ function show_execution_ctx(state, execution_ctx, target) {
     if(binding === undefined)
       return;
 
+    /* Get the value from the allocation */
     if(binding.tag == "Prealloc") {
       var value_opt = MLInterpreter.run_expression(state, execution_ctx, binding.prealloc);
 
@@ -852,15 +860,18 @@ function show_execution_ctx(state, execution_ctx, target) {
     else
       value = binding.normal_alloc;
 
+    /* Display the pair */
     t.append(name + " = ");
     show_value(state, value, target, 0);
     t.append("<br/>");
-}
+  }
 
+  /* Apply the function show_binding on every element of the list of bindings */
   MLList.map(show_binding, lex_env.bindings);
 
   var modules = execution_ctx.opened_modules;
 
+  /* Make a string from the module identifier */
   function show_module_name(id) {
     if(id.tag == "Lident")
       return id.id;
@@ -868,10 +879,12 @@ function show_execution_ctx(state, execution_ctx, target) {
       show_module_name(id.path) + id.id;
   }
 
+  /* Show the list of opened modules */
   if(modules.tag != "[]") {
     t.append("<br/><strong>Opened modules :</strong>");
     var buf = "<ul>";
 
+    /* Make handlers to show or hide the module contents */
     var populate_handlers = function(obj_target, head_id) {
       var handler_close = function() {
         handlers[obj_target] = handler_open;
