@@ -668,6 +668,26 @@ function string_of_option(string_of_elem, opt_elem) {
   }
 }
 
+function string_of_ml_list(list) {
+  var res = "[";
+  var list = list;
+
+  if(list.args.length > 0) {
+      var args = list.args;
+      res += string_of_ml_value(args[0]);
+      list = args[1].value.sumtype;
+
+    while(list !== undefined && list.constructor == "::") {
+      var args = list.args;
+      res += " ; " + string_of_ml_value(args[0]);
+      list = args[1].value.sumtype;
+    }
+  }
+
+  res += "]";
+  return res;
+}
+
 function string_of_ml_value(v) {
   var sepBy = function(sep) {
     return function(fst, value) {
@@ -718,6 +738,9 @@ function string_of_ml_value(v) {
         case "Sumtype":
           var sum = v.value.sumtype;
           var res = sum.constructor;
+          if(res == "::")
+            return string_of_ml_list(sum);
+
           if(sum.args.length > 1) {
             res += " ( ";
             var v0_str = string_of_ml_value(sum.args[0]);
