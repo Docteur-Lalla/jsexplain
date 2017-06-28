@@ -918,6 +918,53 @@ function show_execution_ctx(state, execution_ctx, target) {
   }
 }
 
+function delete_loc(obj) {
+  if(obj.hasOwnProperty("loc"))
+    delete obj.loc;
+
+  for(var attr_name in obj) {
+    var attr = obj[attr_name];
+    if(typeof(attr) == "object") {
+      delete_loc(attr);
+    }
+  }
+}
+
+function show_syntax_object(obj, target) {
+  var t = $('#' + target);
+
+  if(typeof(obj) != "object") {
+    t.append(obj);
+    return;
+  }
+
+  if(obj.tag !== undefined)
+    t.append("<strong>" + obj.tag + "</strong>:<br/>");
+  for(var attr_name in obj) {
+    (function() {
+      if(attr_name != "tag") {
+        var attr = obj[attr_name];
+        var obj_target = fresh_id();
+        t.append('<a onclick=handlers["' + obj_target + '"]()>'
+          + attr_name + '</a>'
+          + '<div style="margin-left: 1em" id="' + obj_target + '"></div>');
+
+        function handler_open() {
+          handlers[obj_target] = handler_close;
+          show_syntax_object(attr, obj_target);
+        }
+
+        function handler_close() {
+          handlers[obj_target] = handler_open;
+          $('#' + obj_target).html("");
+        }
+
+        handlers[obj_target] = handler_open;
+      }
+    }());
+  }
+}
+
 // --------------- Views for interpreter context ----------------
 
 function has_tag_in_set(value, array_tags) {
@@ -1016,10 +1063,13 @@ function show_interp_val(state, v, target, depth) {
       + obj_target
       + '"></div>');
 
+    var clean_v = JSON.parse(JSON.stringify(v));
+    delete_loc(clean_v);
+
     /* Create handlers to expand the link and display the context contents */
     function handler_open() {
       handlers[obj_target] = handler_close;
-      $('#' + obj_target).html(JSON.stringify(v));
+      show_syntax_object(clean_v, obj_target);
     }
 
     function handler_close() {
