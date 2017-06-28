@@ -918,6 +918,7 @@ function show_execution_ctx(state, execution_ctx, target) {
   }
 }
 
+/** Delete recursively the "loc" property of an object */
 function delete_loc(obj) {
   if(obj.hasOwnProperty("loc"))
     delete obj.loc;
@@ -930,16 +931,20 @@ function delete_loc(obj) {
   }
 }
 
+/** Display the syntax object in the specified target */
 function show_syntax_object(obj, target) {
   var t = $('#' + target);
 
+  /* Special case when the object is a constant (number, string or char) */
   if(typeof(obj) != "object") {
     t.append(obj);
     return;
   }
 
+  /* Display the constructor label */
   if(obj.tag !== undefined)
     t.append("<strong>" + obj.tag + "</strong>:<br/>");
+  /* Display each property of the syntax object */
   for(var attr_name in obj) {
     (function() {
       if(attr_name != "tag") {
