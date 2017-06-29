@@ -979,6 +979,7 @@ function show_syntax_object(obj, target) {
 
         else {
           show_syntax_object(attr, target);
+          t.append("<br/>");
         }
       }
     }());
