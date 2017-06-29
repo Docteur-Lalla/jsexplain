@@ -727,6 +727,7 @@ function string_of_ml_value(v) {
       if(opt.tag == "Some" && opt.value.tag == "Result") {
         res += " ";
         var result = opt.value.result;
+        /* Nested variant or sumtype is surrounded by parentheses */
         if(result.tag == "Value_variant" || result.tag == "Value_custom")
           res += "(" + string_of_ml_value(result) + ")";
         else
@@ -738,9 +739,11 @@ function string_of_ml_value(v) {
         case "Sumtype":
           var sum = v.value.sumtype;
           var res = sum.constructor;
+          /* Lists are not written :: (a, :: (b, [])) but a :: b :: [] */
           if(res == "::")
             return string_of_ml_list(sum);
 
+          /* Multiple-arguments are surrounded by parentheses */
           if(sum.args.length > 1) {
             res += " ( ";
             var v0_str = string_of_ml_value(sum.args[0]);
@@ -749,6 +752,7 @@ function string_of_ml_value(v) {
           }
 
           else if(sum.args.length == 1) {
+            /* Nested variant or sumtype is also surrounded by parentheses */
             if(sum.args[0].tag == "Value_variant" || sum.args[0].tag == "Value_custom")
               res += " (" + string_of_ml_value(sum.args[0]) + ")";
             else
@@ -954,8 +958,8 @@ function show_syntax_object(obj, target) {
          * Arrays' elements are just listed without printing the index beforehand. */
         if(isNaN(parseFloat(attr_name))) {
           var obj_target = fresh_id();
-          var style = "margin: 1em 1em 1em 1em;"
-            + "padding: 10px 10px 10px 10px;"
+          var style = "margin: 0.5em 0.5em 0.5em 0.5em;"
+            + "padding: 5px 5px 5px 5px;"
             + "border-width: 1px; border-style: dashed; border-radius: 5px;"
             + "display: inline-block";
           t.append('<a onclick=handlers["' + obj_target + '"]()>'
@@ -1099,7 +1103,6 @@ function show_interp_val(state, v, target, depth) {
     }
 
     handlers[obj_target] = handler_open;
-    // t.append("&lt;syntax-object&gt;");  // + JSON.stringify(v)
   } else if (interp_val_is_list(v)) {
       var items = encoded_list_to_array(v)
       t.append("List:");
