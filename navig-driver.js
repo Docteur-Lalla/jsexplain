@@ -949,22 +949,37 @@ function show_syntax_object(obj, target) {
     (function() {
       if(attr_name != "tag") {
         var attr = obj[attr_name];
-        var obj_target = fresh_id();
-        t.append('<a onclick=handlers["' + obj_target + '"]()>'
-          + attr_name + '</a>'
-          + '<div style="margin-left: 1em" id="' + obj_target + '"></div>');
 
-        function handler_open() {
-          handlers[obj_target] = handler_close;
-          show_syntax_object(attr, obj_target);
-        }
+        /* The attribute name being a number indicates that obj is an array.
+         * Arrays' elements are just listed without printing the index beforehand. */
+        if(isNaN(parseFloat(attr_name))) {
+          var obj_target = fresh_id();
+          var style = "margin: 1em 1em 1em 1em;"
+            + "padding: 10px 10px 10px 10px;"
+            + "border-width: 1px; border-style: dashed; border-radius: 5px;"
+            + "display: inline-block";
+          t.append('<a onclick=handlers["' + obj_target + '"]()>'
+            + attr_name + '</a>'
+            + '<div id="' + obj_target + '"></div>');
 
-        function handler_close() {
+          function handler_open() {
+            handlers[obj_target] = handler_close;
+            show_syntax_object(attr, obj_target);
+            $('#' + obj_target).attr("style", style);
+          }
+
+          function handler_close() {
+            handlers[obj_target] = handler_open;
+            $('#' + obj_target).html("");
+            $('#' + obj_target).attr("style", "");
+          }
+
           handlers[obj_target] = handler_open;
-          $('#' + obj_target).html("");
         }
 
-        handlers[obj_target] = handler_open;
+        else {
+          show_syntax_object(attr, target);
+        }
       }
     }());
   }
