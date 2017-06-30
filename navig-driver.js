@@ -668,18 +668,18 @@ function string_of_option(string_of_elem, opt_elem) {
   }
 }
 
-function string_of_ml_list(list) {
+function string_of_ml_list(state, list) {
   var res = "[";
   var list = list;
 
   if(list.args.length > 0) {
       var args = list.args;
-      res += string_of_ml_value(args[0]);
+      res += string_of_ml_value(state, args[0]);
       list = args[1].value.sumtype;
 
     while(list !== undefined && list.constructor == "::") {
       var args = list.args;
-      res += " ; " + string_of_ml_value(args[0]);
+      res += " ; " + string_of_ml_value(state, args[0]);
       list = args[1].value.sumtype;
     }
   }
@@ -688,11 +688,11 @@ function string_of_ml_list(list) {
   return res;
 }
 
-function string_of_ml_value(v) {
+function string_of_ml_value(state, v) {
   var sepBy = function(sep) {
     return function(fst, value) {
       var res = fst + sep;
-      res += string_of_ml_value(value);
+      res += string_of_ml_value(state, value);
       return res;
     };
   };
@@ -707,14 +707,14 @@ function string_of_ml_value(v) {
       return '"' + v.value + '"';
     case "Value_tuple":
       var res = "(";
-      var v0_str = string_of_ml_value(v.value[0]);
+      var v0_str = string_of_ml_value(state, v.value[0]);
       res += MLArray.fold(sepBy(", "), v0_str, v.value.slice(1));
       res += ")";
       return res;
     case "Value_array":
       var res = "[|";
       if(v.value.length > 0) {
-        var v0_str = string_of_ml_value(v.value[0]);
+        var v0_str = string_of_ml_value(state, v.value[0]);
         res += MLArray.fold(sepBy(" ; "), v0_str, v.value.slice(1));
       }
       res += "|]";
@@ -729,9 +729,9 @@ function string_of_ml_value(v) {
         var result = opt.value.result;
         /* Nested variant or sumtype is surrounded by parentheses */
         if(result.tag == "Value_variant" || result.tag == "Value_custom")
-          res += "(" + string_of_ml_value(result) + ")";
+          res += "(" + string_of_ml_value(state, result) + ")";
         else
-          res += string_of_ml_value(result);
+          res += string_of_ml_value(state, result);
       }
       return res;
     case "Value_custom":
@@ -741,12 +741,12 @@ function string_of_ml_value(v) {
           var res = sum.constructor;
           /* Lists are not written :: (a, :: (b, [])) but a :: b :: [] */
           if(res == "::")
-            return string_of_ml_list(sum);
+            return string_of_ml_list(state, sum);
 
           /* Multiple-arguments are surrounded by parentheses */
           if(sum.args.length > 1) {
             res += " ( ";
-            var v0_str = string_of_ml_value(sum.args[0]);
+            var v0_str = string_of_ml_value(state, sum.args[0]);
             res += MLArray.fold(sepBy(", "), v0_str, sum.args.slice(1));
             res += " )";
           }
@@ -754,9 +754,9 @@ function string_of_ml_value(v) {
           else if(sum.args.length == 1) {
             /* Nested variant or sumtype is also surrounded by parentheses */
             if(sum.args[0].tag == "Value_variant" || sum.args[0].tag == "Value_custom")
-              res += " (" + string_of_ml_value(sum.args[0]) + ")";
+              res += " (" + string_of_ml_value(state, sum.args[0]) + ")";
             else
-              res += " " + string_of_ml_value(sum.args[0]);
+              res += " " + string_of_ml_value(state, sum.args[0]);
           }
           return res;
         case "Record":
@@ -765,7 +765,7 @@ function string_of_ml_value(v) {
           var map = Map.map(function(idx) { return Vector.get(state, idx); }, rec).bindings;
           var show = function(fst, pair) {
             res += " ; " + pair.key + " = ";
-            res += string_of_ml_value(pair.value.normal_alloc);
+            res += string_of_ml_value(state, pair.value.normal_alloc);
           }
 
           res += map.head.key + " = ";
@@ -779,13 +779,13 @@ function string_of_ml_value(v) {
     case "Value_functor":
       return html_escape("<functor>");
     case "Value_exception":
-      return string_of_ml_value({tag: "Value_custom", value: {tag: "Sumtype", sumtype: v.value}});
+      return string_of_ml_value(state, {tag: "Value_custom", value: {tag: "Sumtype", sumtype: v.value}});
   }
 }
 
 function show_value(state, v, target, depth) {
   var t = $("#" + target);
-  t.append(string_of_ml_value(v));
+  t.append(string_of_ml_value(state, v));
 }
 
 /** Make a string from the contents of the module corresponding to the given name in ctx */
@@ -820,7 +820,7 @@ function show_module_contents(state, ctx, name, depth) {
 
       /* Make the string */
       var res = "<li>" + name + " = ";
-      res += string_of_ml_value(value);
+      res += string_of_ml_value(state, value);
       res += "</li>";
       return acc + res;
     }
@@ -1014,7 +1014,7 @@ function interp_val_is_syntax(v) {
   return has_tag_in_set(v, ["Expression_constant", "Expression_ident", "Expression_let", "Expression_tuple",
     "Expression_function", "Expression_match", "Expression_apply", "Expression_variant", "Expression_array",
     "Expression_constructor", "Expression_record", "Expression_field", "Expression_setfield",
-    "Expression_for", "Expression_while", "Expression_sequence",
+    "Expression_for", "Expression_while", "Expression_sequence", "Expression_assert", "Expression_letmodule",
     "Constant_integer", "Constant_float", "Constant_char", "Constant_string",
     "Pattern_any", "Pattern_constant", "Pattern_var", "Pattern_tuple", "Pattern_tuple", "Pattern_array",
     "Pattern_variant", "Pattern_alias", "Pattern_constructor", "Pattern_or",
@@ -1055,7 +1055,7 @@ function show_interp_val(state, v, target, depth) {
     }
     t.append(html_escape("" + v));
   } else if (interp_val_is_ml_value(v)) {
-    t.append(string_of_ml_value(v));
+    t.append(string_of_ml_value(state, v));
   } else if (interp_val_is_state(v)) {
     t.append("&lt;state-object&gt;"); 
   } else if (interp_val_is_execution_ctx(v)) {

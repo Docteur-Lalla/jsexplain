@@ -48,6 +48,7 @@ type expression =
 | Expression_try of location * expression * case array [@f loc, expr, cases]
 | Expression_letmodule of location * Identifier.t * module_expression * expression [@f loc, id, modex, expr]
 | Expression_pack of location * module_expression [@f loc, expr]
+| Expression_assert of location * expression [@f loc, expr]
 
 and pattern =
 | Pattern_any of location [@f loc]

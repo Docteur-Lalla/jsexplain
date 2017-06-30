@@ -225,6 +225,13 @@ and run_expression s ctx _term_ = match _term_ with
   let ctx' = ExecutionContext.add ident idx ctx in
   run_expression s ctx' expr
 | Expression_pack (_, expr) -> run_module_expression s ctx expr
+| Expression_assert (_, expr) ->
+  let%result res = run_expression s ctx expr in
+  let%result b = bool_of_value res in
+  if b then
+    Unsafe.box nil
+  else
+    Unsafe.except (Value_exception { constructor = "Assert_failure" ; args = [| |] })
 
 (** Get the actual value held by the binding b *)
 and value_of s ctx b = match b with
@@ -281,10 +288,10 @@ and pattern_match s ctx value patt = match patt with
         Unsafe.error "Matching failure"
     | _ -> Unsafe.error "Matching failure"
   end
-| Pattern_alias (_, patt, id) ->
-  let%result ctx' = pattern_match s ctx value patt in
+| Pattern_alias (_, subpatt, alias) ->
+  let%result ctx' = pattern_match s ctx value subpatt in
   let idx = Vector.append s (Normal value) in
-  Unsafe.box (ExecutionContext.add id idx ctx')
+  Unsafe.box (ExecutionContext.add alias idx ctx')
 | Pattern_constructor (_, ctor, args) ->
   do_sumtype value (fun sum ->
     if sum.constructor === string_of_identifier ctor then

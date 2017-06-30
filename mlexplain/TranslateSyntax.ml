@@ -154,6 +154,9 @@ let rec translate_expression file e =
   | Texp_pack e ->
     let expr = translate_module_expression file e in
     Expression_pack (loc, expr)
+  | Texp_assert e ->
+    let expr = translate_expression file e in
+    Expression_assert (loc, expr)
 
 and translate_pattern file p =
   let loc = translate_location file p.pat_loc in
@@ -401,6 +404,10 @@ let rec js_of_expression = function
   let js_loc = js_of_location loc in
   let js_expr = js_of_module_expression expr in
   ctor_call "MLSyntax.Expression_pack" [| js_loc ; js_expr |]
+| Expression_assert (loc, expr) ->
+  let js_loc = js_of_location loc in
+  let js_expr = js_of_expression expr in
+  ctor_call "MLSyntax.Expression_assert" [| js_loc ; js_expr |]
 
 and js_of_pattern = function
 | Pattern_any loc ->
