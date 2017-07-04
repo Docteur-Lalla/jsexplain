@@ -24,17 +24,27 @@ let rec string_of_identifier = function
 | Lident id -> id
 | Ldot (path, id) -> strappend (strappend (string_of_identifier path) ".") id
 
+(** Evaluate a constant expression.
+ * This function is trivial, constants are evaluated to their corresponding value *)
 let run_constant = function
 | Constant_integer i -> Value_int i
 | Constant_float f -> Value_float f
 | Constant_char c -> Value_char c
 | Constant_string s -> Value_string (normalize_string s)
 
+(** Get the value pointed by the given identifier. *)
 let rec run_ident s ctx str = match str with
+(* An id is a variable's name, supposedly accessible from the current context.
+ * The id is looked up in the execution context to retrieve the corresponding index,
+ * then the value corresponding to this index is retrieved from the program's state. *)
 | Lident id ->
   let%result idx = ExecutionContext.find id ctx in
   let%result b = Vector.find s idx in
   value_of s ctx b
+(* A dot identifier is a path to an id in a sub-module.
+ * (e.g. "foo.bar" represents the id "bar" in the sub-module "foo")
+ * The path is resolved recursively to get the module in which the id is supposed to be stored,
+ * then the id is looked up in the the module's context to get its value. *)
 | Ldot (path, id) ->
   let%result value = run_ident s ctx path in
   match value with
