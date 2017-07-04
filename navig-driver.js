@@ -141,6 +141,7 @@ function selectSourceDoc(name) {
   if (old_doc.tab) old_doc.tab.removeClass('file_item_current');
   source_docs[name].tab.addClass('file_item_current');
   source.setOption('readOnly', source_docs[name].readOnly);
+  source.setOption("mode", "text/x-ocaml");
   return old_doc;
 }
 
@@ -1245,6 +1246,16 @@ function updateSelectionInCodeMirrorAccordingToExt(codeMirrorObj, locByExt) {
     console.log(locByExt);
     return;
   }
+
+  switch(ext) {
+    case "ml":
+      codeMirrorObj.setOption("mode", "text/x-ocaml");
+      break;
+    case "js":
+      codeMirrorObj.setOption("mode", "text/javascript");
+      break;
+  }
+
   updateSelectionInCodeMirror(codeMirrorObj, loc);
 }
 
@@ -1306,7 +1317,7 @@ function updateSelection() {
 // --------------- CodeMirror ----------------
 
 source = CodeMirror.fromTextArea(document.getElementById('source_code'), {
- mode: 'text/javascript',
+ mode: 'text/x-ocaml',
  lineNumbers: true,
  lineWrapping: true
 });
