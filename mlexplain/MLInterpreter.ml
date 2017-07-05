@@ -308,17 +308,25 @@ and run_expression s ctx _term_ = match _term_ with
 
 (** Get the actual value held by the binding b *)
 and value_of s ctx b = match b with
+(* A normal value is already computed. *)
 | Normal v -> Unsafe.box v
+(* A pre-allocated value needs to be computed. *)
 | Prealloc (e, ctx') -> run_expression s ctx' e
 
+(** Match the given value with the given pattern to get a new execution context. *)
 and pattern_match s ctx value patt = match patt with
+(* The pattern _ matches any pattern and leave the context unchanged. *)
 | Pattern_any _ -> Unsafe.box ctx
+(* The variable pattern matches any pattern and bind the value to the given identifier. *)
 | Pattern_var (_, id) ->
   let idx = Vector.append s (Normal value) in
   Unsafe.box (ExecutionContext.add id idx ctx)
+(* The constant pattern matches its exact value only and leave the context unchanged. *)
 | Pattern_constant (_, c) ->
   let v1 = run_constant c in
   if value_eq v1 value then Unsafe.box ctx else Unsafe.error "Matching failure"
+(* The tuple pattern expects a tuple value and match each of its components to
+ * the tuple value's components *)
 | Pattern_tuple (_, patts) ->
   begin
     match value with
@@ -361,16 +369,22 @@ and pattern_match s ctx value patt = match patt with
         Unsafe.error "Matching failure"
     | _ -> Unsafe.error "Matching failure"
   end
+(* An alias binds the value to another identifier in addition to the bindings
+ * the matching of the pattern may have made. *)
 | Pattern_alias (_, subpatt, alias) ->
   let%result ctx' = pattern_match s ctx value subpatt in
   let idx = Vector.append s (Normal value) in
   Unsafe.box (ExecutionContext.add alias idx ctx')
+(* To match a constructor pattern, the value's contructor must be the same as
+ * the pattern's one and the value's arguments must match the argument patterns. *)
 | Pattern_constructor (_, ctor, args) ->
   do_sumtype value (fun sum ->
     if sum.constructor === string_of_identifier ctor then
       pattern_match_array s ctx sum.args args
     else
       Unsafe.error "Matching failure")
+(* In a disjonctive pattern, if the value does not match the first pattern,
+ * it must match the second. *)
 | Pattern_or (_, patt1, patt2) ->
   Unsafe.do_with_default (pattern_match s ctx value patt1)
     (pattern_match s ctx value patt2) (* default value *)
