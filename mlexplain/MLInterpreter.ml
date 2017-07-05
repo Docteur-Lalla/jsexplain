@@ -390,6 +390,7 @@ and pattern_match s ctx value patt = match patt with
     (pattern_match s ctx value patt2) (* default value *)
     (fun ctx' -> Unsafe.box ctx') (* function to apply *)
 
+(** Try many pattern one after the other until the value matches one. *)
 and pattern_match_many s ctx value cases = match cases with
 | [] -> Unsafe.error "Matching failure"
 | x :: xs ->
@@ -409,6 +410,7 @@ and pattern_match_many s ctx value cases = match cases with
     end
   | Unsafe.Exception ex -> Unsafe.Exception ex
 
+(** Match each value of the array with the corresponding pattern in the pattern array. *)
 and pattern_match_array s ctx ary patts =
   let len = MLArray.length patts in
   let vallen = MLArray.length ary in
@@ -432,10 +434,13 @@ and pattern_match_array s ctx ary patts =
       Unsafe.bind ctx_nsf some_case_func in
    for_loop (Unsafe.box ctx) 0
 
+(** Evaluate a toplevel phrase and return the computed value if any and the new context. *)
 and run_structure_item s ctx _term_ = match _term_ with
+(* Evaluate a core expression. *)
 | Structure_eval (_, e) ->
   let%result v = run_expression s ctx e in
   Unsafe.box { value = v ; ctx = ctx }
+(* Toplevel let bindings the same as core-expression-level let bindings. *)
 | Structure_value (_, is_rec, patts, exp_ary) ->
   (* The data is recursive, a Prealloc binding is generated *)
   if is_rec then
@@ -480,13 +485,20 @@ and run_structure_item s ctx _term_ = match _term_ with
     let%result last = Vector.find s idx in
     let%result v = value_of s ctx' last in
     Unsafe.box { value = v ; ctx = ctx' }
+(* Type definitions are handled at type-checking pass, so there is nothing more to do
+ * at this moment of the execution. *)
 | Structure_type _ -> Unsafe.box { value = nil ; ctx = ctx }
+(* The definition of a module requires the evaluation of the module expression
+ * and then the module expression is bound to an identifier. *)
 | Structure_module (_, id, expr) ->
   let%result m = run_module_expression s ctx expr in
   let idx = Vector.append s (Normal m) in
   let ctx' = ExecutionContext.add id idx ctx in
   Unsafe.box { value = m ; ctx = ctx' }
+(* The definition of a module type is handled during the type checking, so
+ * there is nothing more to do at this point. *)
 | Structure_modtype _ -> Unsafe.box { value = nil ; ctx = ctx }
+(* To include a module, its contents must be added to the current context. *)
 | Structure_include (_, expr) ->
   let%result value = run_module_expression s ctx expr in
   begin
@@ -497,8 +509,15 @@ and run_structure_item s ctx _term_ = match _term_ with
       Unsafe.box { value = nil ; ctx = ExecutionContext.from_map map }
     | _ -> Unsafe.error "Expected a module value"
   end
+(* Both primitive and exception definitions are handled during the type checking. *)
 | Structure_primitive _ -> Unsafe.box { value = nil ; ctx = ctx }
 | Structure_exception _ -> Unsafe.box { value = nil ; ctx = ctx }
+(* Opening a module does not mean that its contents are added to the current context,
+ * it means that they are made available. In this interpreter, when the context is browsed
+ * via the find function, it browses the current context and if no satisfying binding
+ * is found, it browses the map of each opened module.
+ * Therefore, opening a module in this interpreter is adding it to the list of opened modules
+ * of the current context. *)
 | Structure_open (_, id) ->
   let%result v = run_ident s ctx id in
   match v with
