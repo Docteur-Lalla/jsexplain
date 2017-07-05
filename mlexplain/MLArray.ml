@@ -32,7 +32,7 @@ let zipwith f a1 a2 =
   for_loop 1
 
 (** val lift_option : 'a option array -> 'a array option *)
-let lift_option ary =
+let sequence_option ary =
   (* val f : 'a array option -> 'a option -> 'a array option *)
   let f ary_opt opt =
     (* Some ary = ary_opt
@@ -44,7 +44,7 @@ let lift_option ary =
    * with A being an array containing input-array inner values *)
   fold f (Some [| |]) ary
 
-let lift_unsafe ary =
+let sequence_unsafe ary =
   let f ary_nsf nsf =
     let%result ary = ary_nsf in
     let%result v = nsf in

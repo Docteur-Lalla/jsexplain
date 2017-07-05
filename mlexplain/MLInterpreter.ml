@@ -56,26 +56,34 @@ let rec run_ident s ctx str = match str with
     value_of s ctx b
   | _ -> Unsafe.error "Try to get attribute from non-module value"
 
-
+(** Evaluate an expression and get the computed value. *)
 and run_expression s ctx _term_ = match _term_ with
+(* A constant expression is evaluated to its own value. *)
 | Expression_constant (_, c) -> Unsafe.box (run_constant c)
+(* To get the value pointed by an identifier, the entire path it describes must be resolved. *)
 | Expression_ident (_, id) -> run_ident s ctx id
+(* A let expression may be evaluated differently whether it is recursive or not.
+ * In the case it is recursive, the variable must be pre-allocated so its identifier
+ * can exist in its own expression's context. *)
 | Expression_let (_, is_rec, patts, exp_ary, e2) ->
   if is_rec then
-    (* In a recursive definition, the identifiers involved are pr-eallocated
+    (* In a recursive definition, the identifiers involved are pre-allocated
      * This function makes the list of identifiers to pre-allocate *)
     let prealloc p = match p with
     | Pattern_var (_, id) -> Unsafe.box id
     | _ -> Unsafe.error "Used pattern other than variable in recursive definition" in
     let exps = MLList.of_array exp_ary in
-    let%result id_ary = MLArray.lift_unsafe (MLArray.map prealloc patts) in
+    (* Get the list of ids, since complex patterns are not supported in recursive definitions. *)
+    let%result id_ary = MLArray.sequence_unsafe (MLArray.map prealloc patts) in
     let ids = MLList.of_array id_ary in
+    (* Pre-allocate each variable. *)
     let func ctx id exp =
       let idx = Vector.append s (Prealloc (exp, ctx)) in
       let ctx' = ExecutionContext.add id idx ctx in
       Vector.set s idx (Prealloc (exp, ctx')) ; ctx' in
-    (* Add the identifiers to the current context *)
+    (* Add the identifiers to the current context. *)
     let ctx' = MLList.foldl2 func ctx ids exps in
+    (* Evaluate the expression "in" with every variables defined pre-allocated. *)
     run_expression s ctx' e2
   else
     (* The function matches the pattern with the expression and returns the generated context *)
@@ -87,10 +95,17 @@ and run_expression s ctx _term_ = match _term_ with
     let exps = MLList.of_array exp_ary in
     (* Generate a context containing every definition *)
     let%result ctx' = MLList.foldl2 func (Unsafe.box ctx) patt_list exps in
+    (* Evaluate the expression "in" with the generated context. *)
     run_expression s ctx' e2
+(* A function definition is evaluated to a function (in the interpreter world) that matches
+ * each pattern of the function with the value given as argument
+ * and evaluates the corresponding expression. *)
 | Expression_function (_, cases) ->
   let func value = pattern_match_many s ctx value (MLList.of_array cases) in
   Unsafe.box (Value_fun func)
+(* To apply a function to the given arguments, the actual function is applied to the first argument.
+ * The resulting value should be a function that takes the following argument and so on until
+ * there is no pending argument to consume. The resulting value is returned. *)
 | Expression_apply (_, fe, argse) ->
   let rec apply_fun func ctx arg args =
     let%result v = run_expression s ctx arg in
@@ -108,14 +123,17 @@ and run_expression s ctx _term_ = match _term_ with
 
     let%result func = run_expression s ctx fe in
     run_apply func (MLList.of_array argse)
+(* A tuple is the result of the evaluation of its components. *)
 | Expression_tuple (_, tuple) ->
   let value_nsfs = MLArray.map (fun e -> run_expression s ctx e) tuple in
-  let%result t = MLArray.lift_unsafe value_nsfs in
+  let%result t = MLArray.sequence_unsafe value_nsfs in
   Unsafe.box (Value_tuple t)
+(* An array is constructed from the evaluation of its components. *)
 | Expression_array (_, ary) ->
   let value_nsfs = MLArray.map (fun e -> run_expression s ctx e) ary in
-  let%result a = MLArray.lift_unsafe value_nsfs in
+  let%result a = MLArray.sequence_unsafe value_nsfs in
   Unsafe.box (Value_array a)
+(* A variant is stored as its label and its value if any. *)
 | Expression_variant (_, label, expr_opt) ->
   let value_nsf =
     let%result e = Unsafe.of_option expr_opt in
@@ -126,17 +144,26 @@ and run_expression s ctx _term_ = match _term_ with
     Some value_nsf in
   let variant = { label = label ; value_opt = value_opt } in
   Unsafe.box (Value_variant variant)
+(* Since a match ... with expression is equivalent to the application of the corresponding lambda function,
+ * it is evaluated the exact same way. *)
 | Expression_match (loc, expr, cases) ->
   let func = Expression_function (loc, cases) in
   let app = Expression_apply (loc, func, [| expr |]) in
   run_expression s ctx app
+(* Sumtype instances are evaluated like variants except it builds a Sumtype value and
+ * sumtype constructors accept several values as arguments *)
 | Expression_constructor (_, ctor, args) ->
   let value_nsfs = MLArray.map (fun e -> run_expression s ctx e) args in
-  let%result values =  MLArray.lift_unsafe value_nsfs in
+  let%result values =  MLArray.sequence_unsafe value_nsfs in
   let sum = Sumtype { constructor = string_of_identifier ctor ; args = values } in
   Unsafe.box (Value_custom sum)
+(* A record has a field set and a base. The base is the record specified by the "with" syntax
+ * (or an empty field set if no base has been specified).
+ * The bindings here are the fields that are updated, they override the corresponding fields
+ * in the provided base. *)
 | Expression_record (_, bindings, base_opt) ->
-  let func map_nsf binding =
+  (* Function that adds the given binding to the map if it is valid. *)
+  let add_to_map map_nsf binding =
     let%result map = map_nsf in
     let%result value = run_expression s ctx binding.expr in
     let idx = Vector.append s (Normal value) in
@@ -145,19 +172,26 @@ and run_expression s ctx _term_ = match _term_ with
   let empty_map = Map.empty_map string_eq (fun r -> r) in
   (* If the value is a record, the function is applied, otherwise the default value is returned *)
   let map_from_value v = do_record_with_default v empty_map (fun r -> r) in
+  (* The map of bindings of the base record. *)
   let base_map =
     Unsafe.do_with_default (Unsafe.of_option base_opt) empty_map (fun base ->
     Unsafe.do_with_default (run_expression s ctx base) empty_map (fun v ->
     map_from_value v)) in
-  let%result map = MLArray.fold func (Unsafe.box base_map) bindings in
+  let%result map = MLArray.fold add_to_map (Unsafe.box base_map) bindings in
+  (* Create the new record. *)
   let r = Record map in
   Unsafe.box (Value_custom r)
+(* To retrieve a field from a record, the expression corresponding to the record is evaluated,
+ * then the field name is looked up in the map of bindings of this record. *)
 | Expression_field (_, record, fieldname) ->
   let%result value = run_expression s ctx record in
   do_record value (fun record ->
     let%result idx = Map.find fieldname record in
     let%result binding = Vector.find s idx in
     value_of s ctx binding)
+(* To update a field in a record, the record expression's value is computed then the index
+ * of the state where the value of the field is stored is retrieved. Finally the value at
+ * this index is updated. *)
 | Expression_setfield (_, record, fieldname, expr) ->
   let%result value = run_expression s ctx record in
   do_record value (fun record ->
@@ -165,15 +199,26 @@ and run_expression s ctx _term_ = match _term_ with
     let%result v = run_expression s ctx expr in
       let ignore = Vector.set s idx (Normal v) in
       Unsafe.box nil)
+(* To evaluate a conditional expression, the condition expression is evaluated and depending on
+ * the resulting value the first expression or the second one is evaluated.
+ * There may not be a second expression, in this case, nothing is done and
+ * the conditional expression returns nil. *)
 | Expression_ifthenelse (_, cond, e1, e2) ->
   let%result cond_val = run_expression s ctx cond in
     if is_sumtype_ctor "true" cond_val then
       run_expression s ctx e1
     else
       Unsafe.do_with_default (Unsafe.of_option e2) (Unsafe.box nil) (fun e -> run_expression s ctx e)
+(* Evaluating a sequence of two expressions is equivalent to evaluate the first one,
+ * discard the result and finally evaluate the second one. *)
 | Expression_sequence (_, e1, e2) ->
   run_expression s ctx e1 ;
   run_expression s ctx e2
+(* The evaluation of a while loop is recursive. First the condition is evaluated and if the result
+ * is false, it returns nil. If the result is true, the body of the loop is evaluated and
+ * the whole while-loop exression is re-evaluated as is.
+ * The reason why it does not loop infinitely is because the state of the program may (should)
+ * be modify at each iteration of the loop, making the condition expression evaluate differently *)
 | Expression_while (loc, cond_expr, body) ->
   (* Alias pattern not supported by the compiler *)
   let while_expr = Expression_while (loc, cond_expr, body) in
@@ -187,11 +232,16 @@ and run_expression s ctx _term_ = match _term_ with
   else
     (* While loops ultimately return nil *)
     Unsafe.box nil)
+(* For loops are complex in OCaml since the iteration can go upward or downward depending on
+ * the keyword used ("to" or "downto"). To solve this problem a function "step"
+ * computes the value for the next iteration. Then the value the variable takes at the beginning
+ * and the value it is to reach are computed. The variable is created in the state and the context.
+ * Finally the body is evaluated until the variable reach its final value. *)
 | Expression_for (_, id, fst, lst, dir, body) ->
   let%result first = run_expression s ctx fst in
   let%result last = run_expression s ctx lst in
   (* Create a new object in the program's state and add a reference to it in the context
-   * val <id> : int = <first> (and stored in the state at index <idx> *)
+   * val <id> : int = <first> (and stored in the state at index <idx>) *)
   let idx = Vector.append s (Normal first) in
   let ctx' = ExecutionContext.add id idx ctx in
   let step_value = if dir then 1 else -1 in
@@ -201,6 +251,8 @@ and run_expression s ctx _term_ = match _term_ with
   let get_int v = match v with
   | Value_int i -> Unsafe.box i
   | _ -> Unsafe.error "Expected an int" in
+  (* Main function of the for-loop interpretation.
+   * It evaluates the body of the loop iff its variant is true. *)
   let rec iter nil =
     let%result b = Vector.find s idx in
     let%result v = value_of s ctx b in
@@ -210,7 +262,7 @@ and run_expression s ctx _term_ = match _term_ with
     let fv = number_of_int iv in
     let flast = number_of_int ilast in
     (* Check whether fv has reached flast depending on the direction *)
-    if (dir && fv < flast) || (not dir && fv > flast) then
+    if (dir && fv <= flast) || (not dir && fv >= flast) then
       let%result res = run_expression s ctx' body in
       let%result v' = step v in
        
@@ -221,6 +273,9 @@ and run_expression s ctx _term_ = match _term_ with
       (* A for loop returns uni *)
       Unsafe.box Value.nil in
   iter ()
+(* Try expressions are meant to catch exceptions. Since exceptions are represented by
+ * a constructor of the type Unsafe.t in the interpreter, the watched expression is
+ * evaluated normally and the result is filtered. *)
 | Expression_try (_, expr, cases) ->
   let ret = run_expression s ctx expr in
   begin
@@ -228,13 +283,21 @@ and run_expression s ctx _term_ = match _term_ with
     | Unsafe.Exception x -> pattern_match_many s ctx x (MLList.of_array cases)
     | _ -> ret
   end
+(* Let-module expressions are almost the same as simple let expressions since
+ * the internal representation of first-class modules and classical modules is
+ * identical. *)
 | Expression_letmodule (_, id, modex, expr) ->
   let%result md = run_module_expression s ctx modex in
   let ident = string_of_identifier id in
   let idx = Vector.append s (Normal md) in
   let ctx' = ExecutionContext.add ident idx ctx in
   run_expression s ctx' expr
+(* Internal representation of first-class modules is the same as classical modules.
+ * There is thus nothing to do to pack a module. *)
 | Expression_pack (_, expr) -> run_module_expression s ctx expr
+(* Assertions throw an exception if the given expression evaluates to false.
+ * The expression is therefore evaluated and the result value is checked.
+ * A nil value is sent in case of success, an Assert_failure is thrown otherwise. *)
 | Expression_assert (_, expr) ->
   let%result res = run_expression s ctx expr in
   let%result b = bool_of_value res in
@@ -368,7 +431,7 @@ and run_structure_item s ctx _term_ = match _term_ with
     | _ -> Unsafe.error "Used a pattern other than variable in recursive definition" in
     let exps = MLList.of_array exp_ary in
     let prealloc_vars = MLArray.map prealloc patts in
-    let%result id_ary = MLArray.lift_unsafe prealloc_vars in
+    let%result id_ary = MLArray.sequence_unsafe prealloc_vars in
     let ids = MLList.of_array id_ary in
     (* Auxiliary function adding a Prealloc of exp bound to id in the given context *)
     let func ctx id exp =
