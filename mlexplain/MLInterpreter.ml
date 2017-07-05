@@ -524,19 +524,32 @@ and run_structure_item s ctx _term_ = match _term_ with
   | Value_struct md -> Unsafe.box { value = nil ; ctx = ExecutionContext.open_module id md ctx }
   | _ -> Unsafe.error "Expected a module"
 
+(** Evaluate a module expression and return the computed value. *)
 and run_module_expression s ctx _term_ = match _term_ with
+(* An identifier implies a reference to another module, so the value this identifier holds
+ * is retrieved. *)
 | Module_ident (_, id) -> run_ident s ctx id
+(* Structures are the main module expressions. They are a set of definitions and evaluations.
+ * Each phrase in the structure is executed and the resulting module is returned.
+ * The resulting module contains the execution context as it was at end of the structure's
+ * evalutation. *)
 | Module_structure (_, str) ->
   (* Run the structure and put the returned context in the struct value *)
   let%result res = run_structure s ctx str in
   let map = ExecutionContext.execution_ctx_lexical_env res.ctx in
   Unsafe.box (Value_struct map)
+(* Functors are functions that take a module as argument and return a new module. Obviously,
+ * a functor's definition computes a function with the same behavior. *)
 | Module_functor (_, id, expr) ->
+  (* The function that takes the module as argument and returns the new one. *)
   let func varg =
     let idx = Vector.append s (Normal varg) in
     let ctx' = ExecutionContext.add id idx ctx in
     run_module_expression s ctx' expr in
   Unsafe.box (Value_functor func)
+(* The application of a functor to a module is similar to the application of a function
+ * to a value. The functor's value and the argument's value are computed and then
+ * the functor is applied to the argument. *)
 | Module_apply (_, f, e) ->
   let%result func = run_module_expression s ctx f in
   let%result expr = run_module_expression s ctx e in
@@ -545,7 +558,11 @@ and run_module_expression s ctx _term_ = match _term_ with
     | Value_functor fctor -> fctor expr
     | _ -> Unsafe.error "Expected a functor"
   end
+(* Constraints are handled during the type checking pass, so there is nothing more to do. *)
 | Module_constraint (_, expr) -> run_module_expression s ctx expr
+(* Module unpacking is all about making a module from a first-class module.
+ * The given expression is evaluated and should return a module value. Since modules and first-class
+ * modules have the same internal representation in this interpreter, there is nothing more to do. *)
 | Module_unpack (_, expr) -> run_expression s ctx expr
 
 and run_structure s ctx _term_ =
