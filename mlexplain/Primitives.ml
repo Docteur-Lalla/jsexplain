@@ -66,7 +66,7 @@ let pervasives_sign =
     List.map (fun id -> Sig_value (Ident.create id, int_bin_op)) ["+" ; "-" ; "*" ; "/"] ;
     List.map (fun id -> Sig_value (Ident.create id, float_bin_op)) ["+." ; "-." ; "*." ; "/."] ;
     List.map (fun id -> Sig_value (Ident.create id, bool_bin_op)) ["&&" ; "||"] ;
-    List.map (fun id -> Sig_value (Ident.create id, cmp_bin_op)) ["=" ; "<" ; ">" ; "<=" ; "=<" ; "<>"] ;
+    List.map (fun id -> Sig_value (Ident.create id, cmp_bin_op)) ["=" ; "<" ; ">" ; "<=" ; ">=" ; "<>"] ;
     List.map (fun id -> Sig_value (Ident.create id, float_float_function_type)) float_float_function_list
   ]
 
