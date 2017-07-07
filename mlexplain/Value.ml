@@ -133,7 +133,13 @@ and custom_eq c1 c2 = match c1 with
 and sumtype_eq s1 s2 =
   let t1 = Value_tuple s1.args in
   let t2 = Value_tuple s2.args in
-  s1.constructor === s2.constructor && value_eq t1 t2
+  if MLArray.length s1.args === MLArray.length s2.args then
+    if MLArray.length s1.args === 0 then
+      s1.constructor === s2.constructor
+    else
+      s1.constructor === s2.constructor && value_eq t1 t2
+  else
+    false
 
 let value_inf v1 v2 = match v1 with
 | Value_int i1 ->
