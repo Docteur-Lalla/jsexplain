@@ -21,7 +21,7 @@ matrix:
   allow_failures:
     - os: linux
       node_js: "4"
-      env: TESTJSJSREF=true
+      env: TESTJSJSREF=false
 
 
 install:
