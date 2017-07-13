@@ -15,7 +15,7 @@ matrix:
       env: DEPLOY=true
     - os: linux
       node_js: "4"
-      env: TESTJSJSREF=true
+      env: TESTJSJSREF=false
     #- os: osx
     #  node_js: "4"
   allow_failures:
