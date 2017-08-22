@@ -45,9 +45,9 @@ doc/jsref: generator
 
 # Publication Stages
 PUB_FILES=driver.html libraries jquery-ui-1.11.4.custom jquery_scroll \
-	  jsref/displayed_sources.js tools.js node_modules/esprima/esprima.js \
-	  esprima-to-ast.js jsref/lineof.js navig-driver.js \
-	  jsref/assembly.js doc/documentation.html doc/screenshots doc/jsref
+	  mlexplain/displayed_sources.js tools.js node_modules/esprima/esprima.js \
+	  esprima-to-ast.js mlexplain/lineof.js navig-driver.js \
+	  mlexplain/assembly.js doc/documentation.html doc/screenshots doc/jsref
 
 dist: jsjsref $(PUB_FILES)
 	mkdir -p $@
