@@ -37,17 +37,17 @@ test: jsjsref
 	node_modules/.bin/mocha
 
 # Documentation
-doc: doc/jsref
+doc: doc/mlexplain
 
 doc/jsref: generator
-	$(MAKE) -C jsref doc
-	mv jsref/doc_build doc/jsref
+	$(MAKE) -C mlexplain doc
+	mv mlexplain/doc_build doc/mlexplain
 
 # Publication Stages
 PUB_FILES=driver.html libraries jquery-ui-1.11.4.custom jquery_scroll \
 	  mlexplain/displayed_sources.js tools.js node_modules/esprima/esprima.js \
 	  esprima-to-ast.js mlexplain/lineof.js navig-driver.js \
-	  mlexplain/assembly.js doc/documentation.html doc/screenshots doc/jsref
+	  mlexplain/assembly.js
 
 dist: jsjsref $(PUB_FILES)
 	mkdir -p $@
