@@ -30,7 +30,6 @@ install:
   - make init
   - if [ -n "$TESTJSJSREF" ]; then make test_init; fi
   - eval `opam config env`
-  - opam install js_of_ocaml
 
 script:
   - make
