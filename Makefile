@@ -1,5 +1,5 @@
 # all: generator mlparser mljsref jsjsref mlexplain
-all: generator mlparser mlexplain
+all: generator mlexplain
 
 # Init stages
 init:
