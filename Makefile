@@ -69,4 +69,4 @@ clean:
 	rm -Rf doc/jsref || true
 	rm -Rf dist || true
 
-.PHONY: mlparser jsjsref mljsref generator generator-stdlib test_init test doc publish publish-github clean
+.PHONY: mlexplain generator generator-stdlib publish publish-github clean
