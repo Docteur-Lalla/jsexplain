@@ -32,7 +32,7 @@ install:
   - eval `opam config env`
 
 script:
-  - make clean | true
+  - make clean 
   - make
   - if [ -n "$TESTJSJSREF" ]; then make test; fi
 
