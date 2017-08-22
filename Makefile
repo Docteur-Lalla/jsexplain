@@ -16,14 +16,14 @@ init:
 generator:
 	$(MAKE) -C generator
 
-mlparser: generator
-	$(MAKE) -C jsref/mlparser
+#mlparser: generator
+#	$(MAKE) -C jsref/mlparser
 
-jsjsref: generator mlparser
-	$(MAKE) -C jsref jsjsref
+#jsjsref: generator mlparser
+#	$(MAKE) -C jsref jsjsref
 
-mljsref: generator # (requires the ppx)
-	$(MAKE) -C jsref mljsref
+#mljsref: generator # (requires the ppx)
+#	$(MAKE) -C jsref mljsref
 
 mlexplain: generator
 	$(MAKE) -C mlexplain
