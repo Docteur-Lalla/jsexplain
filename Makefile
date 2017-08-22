@@ -7,7 +7,7 @@ init:
 	eval `opam config env`
 	opam pin -yn add jsjsref .
 	opam pin -yn add JS_Parser "https://github.com/resource-reasoning/JS_Parser.git#v0.1.0"
-	opam install -y js_of_ocaml
+	opam install -y "js_of_ocaml=2.8.4"
 	opam install -y jsjsref --deps-only
 	@echo
 	@echo 'You now need to execute: eval `opam config env`'
