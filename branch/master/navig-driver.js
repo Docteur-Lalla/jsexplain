@@ -75,34 +75,22 @@ var initialSourceName = "";
 // Initial source code
 
 var source_files = [
-  // '',
-  'var x = 1;\nx++;\nx',
-  'var x = { a : { c : 1 } };\nx.a.b = 2;\nx.a.x = x;\nx',
-  'var t = [];\nfor (var i = 0; i < 3; i++) {\n  t[i] = function() { return i; } \n};\nt[0](); ',
-  'var t = [];\nfor (var i = 0; i < 3; i++) {\n  t[i] = (function(j) {\n      return function() { return j; }; \n    })(i); \n};\nt[0](); ',
-  '2+3',
-  'var x = 2+"foo"',
-  '(+{}+[])[+!![]]',
-  'var f = function() {return "f"}; eval("var g = function() {return \\"g\\"}; eval(\\"var h = function() {return \\\\\\"h\\\\\\"}; f(); g(); h()\\"); h();"); g(); h(); f();',
-  '(function (x) {return arguments;})(3)',
-  'var s = "val(\\"++x\\")";\neval("x=0; e" + s)',
-  'var x = 2;\nx',
-  '"use strict";\nvar x = 1;\ nx++;\nx',
-  '{} + {}',
-  'x = [1]',  
-  'throw 3',
-  'var x = { a : 1, b : 2 }; ',
-  'var x = { a : 1 };\n x.b = 2;\nx',
-  'var x = { a : { c: 1 } };\n x.a.b = 2;\nx',
-  '(function (x) {return 1;})()',
-  '(function (x) {\nreturn 1;\n})({a:{b:2}})',
-  'eval("var x = { a : 1 };\\nx.b = 2;\\nx");',
-  'var t = {};\nfor (var i = 0; i < 3; i++) {\n  t[i] = eval("i + " + i); \n};\nt; ',
-  'function f() {\n   var x = 2;\n   function g() { var x = 3; return x; };\n   return g(); \n};\nf()',
-  '(2 < 3) && ((3 > 5) || (true || x.f))',
-  '2+2',
-  'f()',
-  '2 === 2',
+  '43',
+  'let x = 2 in x',
+  'let _ = "no" in 65',
+  'let y = (43, "hehe") in (y, y)',
+  'let x = 12 in let y = 43.78 in (y, x)',
+  'let zero = `O\n' +
+  'and succ n = `S n in\n' +
+  'let rec add a = function\n' +
+  '| `O -> a\n' +
+  '| `S n -> add (succ a) n in\n' +
+  'let mult a b =\n' +
+  '  let rec aux acc a = function\n' +
+  '  | `O -> acc\n' +
+  '  | `S n -> aux (add acc a) a n in\n' +
+  '  aux zero a b in\n' +
+  'mult (succ (succ zero)) (succ (succ (succ zero)))'
 ];
 
 source_files.reduce((select, file_content) => {
@@ -115,7 +103,7 @@ source_files.reduce((select, file_content) => {
 
 function initSourceDocs() {
   source_docs = {};
-  Translate_syntax.eval_counter = 0;
+  // Translate_syntax.eval_counter = 0;
   $('#source_tabs').empty();
 }
 
@@ -153,6 +141,7 @@ function selectSourceDoc(name) {
   if (old_doc.tab) old_doc.tab.removeClass('file_item_current');
   source_docs[name].tab.addClass('file_item_current');
   source.setOption('readOnly', source_docs[name].readOnly);
+  source.setOption("mode", "text/x-ocaml");
   return old_doc;
 }
 
@@ -168,7 +157,7 @@ function setInitialSourceCode(name, text) {
 }
 
 $('#select_source_code').change(e => {
-  setInitialSourceCode("example" + (e.target.selectedOptions[0].index - 1) + ".js", e.target.value);
+  setInitialSourceCode("example" + (e.target.selectedOptions[0].index - 1) + ".ml", e.target.value);
   buttonRunHandler();
 });
 $('#select_file').change(e => {
@@ -189,23 +178,6 @@ function setExample(idx) {
 
 // --------------- Predicate search ----------------
 
-function jsvalue_of_prim(v) {
-  switch (v.tag) {
-  case "Coq_prim_undef":
-    return undefined;
-  case "Coq_prim_null":
-    return null;
-  case "Coq_prim_bool":
-    return (v.value) ? true : false;
-  case "Coq_prim_number":
-    return v.value;
-  case "Coq_prim_string":
-    return v.value;
-  default:
-    throw "unrecognized tag in jsvalue_of_prim";
-  }
-}
-
 function jsvalue_of_value(v) {
   switch (v.tag) {
      case "Coq_value_prim":
@@ -217,20 +189,6 @@ function jsvalue_of_value(v) {
   }
 }
 
-function lookup_var_in_record_decl(name, env_record_decl) {
-  var ro = HeapStr.read_option(env_record_decl, name);
-  switch (ro.tag) {
-    case "None":
-      return undefined;
-    case "Some":
-      var r = ro.value;
-      var mutability = r[0];
-      var value = r[1];
-      return value;
-    default:
-      throw "unrecognized tag in lookup_var_in_record_decl";
-  }
-}
   /* DEPRECATED, naive code for lookup_var_in_record_decl:
    var items_array = array_of_heap(env_record_decl);
    for (var i = 0; i < items_array.length; i++) {
@@ -253,7 +211,7 @@ function lookup_var_in_object(state, name, loc) {
    switch (ro.tag) {
      case "None":
        return undefined;
-    case "Some":
+     case "Some":
        var attribute = ro.value;
        switch (attribute.tag) {
          case "Coq_attributes_data_of":
@@ -700,50 +658,6 @@ function string_of_any(v) {
 
 // --------------- Views for JS state/context ----------------
 
-/*
-function array_of_heap(compare, heap) {
-  var items_list = Heap.to_list(compare, heap);
-  return encoded_list_to_array(items_list);
-}
-*/
-
-
-function string_of_prealloc(prealloc) {
-    return (prealloc.tag).slice("Coq_prealloc_".length);
-  //TODO:
-  // Coq_prealloc_mathop  [@f mathop] of mathop
-  // Coq_prealloc_native_error  [@f error] of native_error
-  // Coq_prealloc_native_error_proto  [@f error] of native_error
-}
-
-function string_of_loc(loc) {
-  switch (loc.tag) {
-  case "Coq_object_loc_normal":
-    return loc.address;
-  case "Coq_object_loc_prealloc":
-    return string_of_prealloc(loc.prealloc);
-  default:
-    throw "unrecognized tag in string_of_loc";
-  }
-}
-
-function string_of_prim(v) {
-  switch (v.tag) {
-  case "Coq_prim_undef":
-    return "undefined";
-  case "Coq_prim_null":
-    return "null";
-  case "Coq_prim_bool":
-    return (v.value) ? "true" : "false";
-  case "Coq_prim_number":
-    return "" + v.value;
-  case "Coq_prim_string":
-    return "\"" + html_escape(v.value) + "\"";
-  default:
-    throw "unrecognized tag in string_of_prim";
-  }
-}
-
 function string_of_option(string_of_elem, opt_elem) {
   switch (opt_elem.tag) {
   case "None":
@@ -755,250 +669,329 @@ function string_of_option(string_of_elem, opt_elem) {
   }
 }
 
-function string_of_mutability(mutability) {
-  return (mutability.tag).slice("Coq_mutability_".length);
+function string_of_ml_list(state, list) {
+  var res = "[";
+  var list = list;
+
+  if(list.args.length > 0) {
+      var args = list.args;
+      res += string_of_ml_value(state, args[0]);
+      list = args[1].value.sumtype;
+
+    while(list !== undefined && list.constructor == "::") {
+      var args = list.args;
+      res += " ; " + string_of_ml_value(state, args[0]);
+      list = args[1].value.sumtype;
+    }
+  }
+
+  res += "]";
+  return res;
 }
 
+function string_of_ml_value(state, v) {
+  var sepBy = function(sep) {
+    return function(fst, value) {
+      var res = fst + sep;
+      res += string_of_ml_value(state, value);
+      return res;
+    };
+  };
 
-  /*
-  type coq_object = { object_proto_ : value;
-                    object_class_ : class_name;
-                    object_extensible_ : bool;
-                    object_prim_value_ : value option;
-                    object_properties_ : object_properties_type;
-                    object_get_ : builtin_get;
-                    object_get_own_prop_ : builtin_get_own_prop;
-                    object_get_prop_ : builtin_get_prop;
-                    object_put_ : builtin_put;
-                    object_can_put_ : builtin_can_put;
-                    object_has_prop_ : builtin_has_prop;
-                    object_delete_ : builtin_delete;
-                    object_default_value_ : builtin_default_value;
-                    object_define_own_prop_ : builtin_define_own_prop;
-                    object_construct_ : construct option;
-                    object_call_ : call option;
-                    object_has_instance_ : builtin_has_instance option;
-                    object_scope_ : lexical_env option;
-                    object_formal_parameters_ : string list option;
-                    object_code_ : funcbody option;
-                    object_target_function_ : object_loc option;
-                    object_bound_this_ : value option;
-                    object_bound_args_ : value list option;
-                    object_parameter_map_ : object_loc option }
-                    */
-   // TODO  for object_prim_value_, use string_of_option(show_elem, opt_elem)
-/*
-    type attributes =
-    | Coq_attributes_data_of [@f value] of attributes_data
-    | Coq_attributes_accessor_of [@f value] of attributes_accessor
-
-
-    type attributes_data = { attributes_data_value : value;
-                             attributes_data_writable : bool;
-                             attributes_data_enumerable : bool;
-                             attributes_data_configurable : bool }
-
-    type attributes_accessor = { attributes_accessor_get : value;
-                                 attributes_accessor_set : value;
-                                 attributes_accessor_enumerable : bool;
-                                 attributes_accessor_configurable : bool }
-*/
-
-function show_object(state, loc, target, depth) {
-   var t = $("#" + target);
-   if (depth < 0) {
-     t.append("&lt;hidden&gt;");
-     return;
-   }
-   var obj_opt = JsCommonAux.object_binds_option(state, loc);
-   if (obj_opt.tag != "Some") throw "show_object: unbound object";
-   var obj = obj_opt.value;
-   var props = obj.object_properties_;
-   var key_value_pair_array = encoded_list_to_array(HeapStr.to_list(props));
-   // 
-   var is_global = (string_of_loc(loc) == "global");
-
-   key_value_pair_array.push(["[[Prototype]]", obj.object_proto_]);
-
-   for (var j = 0; j < key_value_pair_array.length; j++) {
-      var i = key_value_pair_array.length-j-1;
-      var prop_name = key_value_pair_array[i][0];
-      var attribute = key_value_pair_array[i][1];
-
-      var targetsub = fresh_id();
-      t.append("<div style='margin-left:1em' id='" + targetsub + "'></div>");
-      $("#" + targetsub).html("&ndash; " + html_escape(prop_name) + ": ");
-
-      switch (attribute.tag) {
-        case "Coq_attributes_data_of":
-          var attr = attribute.value;
-          var prop_value = attr.attributes_data_value;
-          show_value(state, prop_value, targetsub, depth-1);
-
-          break;
-        case "Coq_attributes_accessor_of": 
-          var attr = attribute.value;
-          $("#" + targetsub).append(" &lt;accessor&gt; ");
-          // TODO: complete
-
-          break;
-        case "Coq_value_prim":
-        case "Coq_value_object":
-          show_value(state, attribute, targetsub, depth-1);
-          break;
-
-        default: 
-          console.log(attribute);
-          throw "invalid attribute.tag";
+  switch(v.tag) {
+    case "Value_int":
+    case "Value_float":
+      return v.value;
+    case "Value_char":
+      return "'" + v.value + "'";
+    case "Value_string":
+      return '"' + v.value + '"';
+    case "Value_tuple":
+      var res = "(";
+      var v0_str = string_of_ml_value(state, v.value[0]);
+      res += MLArray.fold(sepBy(", "), v0_str, v.value.slice(1));
+      res += ")";
+      return res;
+    case "Value_array":
+      var res = "[|";
+      if(v.value.length > 0) {
+        var v0_str = string_of_ml_value(state, v.value[0]);
+        res += MLArray.fold(sepBy(" ; "), v0_str, v.value.slice(1));
       }
-   }
-
-   // special display for empty objects
-   if (key_value_pair_array.length === 0) {
-     t.append("(empty object)");
-   }
-
-   // custom fields
-   var props = obj.object_code_;
-   if (obj.object_code_.tag == "Some") {
-      var targetfunc = fresh_id();
-      t.append("<div style='margin-left:1em' id='" + targetfunc + "'>&ndash; &lt;Function&gt;</div>");
-      if (obj.object_scope_.tag == "Some") {
-         var func_lexical_env = obj.object_scope_.value;
-         var targetscope = fresh_id();
-         $("#" + targetfunc).append("<div style='margin-left:1em'>&ndash; scope:<div style='margin-left:1em' id='" + targetscope + "'></div></div>");
-         show_lexical_env(state, func_lexical_env, targetscope);
+      res += "|]";
+      return res;
+    case "Value_fun":
+      return html_escape("<function>");
+    case "Value_variant":
+      var res = "`" + v.value.label;
+      var opt = v.value.value_opt;
+      if(opt.tag == "Some" && opt.value.tag == "Result") {
+        res += " ";
+        var result = opt.value.result;
+        /* Nested variant or sumtype is surrounded by parentheses */
+        if(result.tag == "Value_variant" || result.tag == "Value_custom")
+          res += "(" + string_of_ml_value(state, result) + ")";
+        else
+          res += string_of_ml_value(state, result);
       }
-   }
+      return res;
+    case "Value_custom":
+      switch(v.value.tag) {
+        case "Sumtype":
+          var sum = v.value.sumtype;
+          var res = sum.constructor;
+          /* Lists are not written :: (a, :: (b, [])) but a :: b :: [] */
+          if(res == "::")
+            return string_of_ml_list(state, sum);
+
+          /* Multiple-arguments are surrounded by parentheses */
+          if(sum.args.length > 1) {
+            res += " ( ";
+            var v0_str = string_of_ml_value(state, sum.args[0]);
+            res += MLArray.fold(sepBy(", "), v0_str, sum.args.slice(1));
+            res += " )";
+          }
+
+          else if(sum.args.length == 1) {
+            /* Nested variant or sumtype is also surrounded by parentheses */
+            if(sum.args[0].tag == "Value_variant" || sum.args[0].tag == "Value_custom")
+              res += " (" + string_of_ml_value(state, sum.args[0]) + ")";
+            else
+              res += " " + string_of_ml_value(state, sum.args[0]);
+          }
+          return res;
+        case "Record":
+          var rec = v.value.record;
+          var res = "{ ";
+          var map = Map.map(function(idx) { return Vector.get(state, idx); }, rec).bindings;
+          var show = function(fst, pair) {
+            res += " ; " + pair.key + " = ";
+            res += string_of_ml_value(state, pair.value.normal_alloc);
+          }
+
+          res += map.head.key + " = ";
+          var v0_str = map.head.value.normal_alloc;
+          res += MLList.foldl(show, v0_str, map.tail);
+          res += " }";
+          return res;
+      }
+    case "Value_struct":
+      return html_escape("<module structure>");
+    case "Value_functor":
+      return html_escape("<functor>");
+    case "Value_exception":
+      return string_of_ml_value(state, {tag: "Value_custom", value: {tag: "Sumtype", sumtype: v.value}});
+  }
 }
 
 function show_value(state, v, target, depth) {
   var t = $("#" + target);
-  switch (v.tag) {
-  case "Coq_value_prim":
-    var s = string_of_prim(v.value);
-    t.append(s);
-    return;
-  case "Coq_value_object":
-     var loc = v.value;
-     var obj_target = fresh_id();
-     t.append("<span class='heap_link'><a onclick=\"handlers['" + obj_target + "']()\" >&lt;Object&gt;(" + string_of_loc(loc) + ")</a><span id='" + obj_target + "'></span></span>"); 
-     function handler_close() {
-       handlers[obj_target] = handler_open;
-       $("#" + obj_target).html("");
-       interpreter.focus();
-     }
-     function handler_open() {
-       handlers[obj_target] = handler_close;
-       show_object(state, loc, obj_target, 1);
-       interpreter.focus();
-     };
-     // initial opening of the object
-     if (depth > 0) {
-       handlers[obj_target] = handler_close;
-       show_object(state, loc, obj_target, depth);
-     } else {
-       handler_close();
-     }
-     return;
-  default:
-    throw "unrecognized tag in show_value";
+  t.append(string_of_ml_value(state, v));
+}
+
+/** Make a string from the contents of the module corresponding to the given name in ctx */
+function show_module_contents(state, ctx, name, depth) {
+  var md_nsf = MLInterpreter.run_ident(state, ctx, name);
+  if (md_nsf.tag == "Result") {
+    var md = md_nsf.result;
+    var indent = "  ".repeat(depth);
+
+    /* Make a string from a pair of name and allocation */
+    var show_binding = function(acc, pair) {
+      var name = pair.key;
+      var idx = pair.value;
+      var binding = Vector.get(state, idx);
+      var value = undefined;
+
+      if(binding === undefined)
+        return;
+
+      /* Get the value from the allocation */
+      if(binding.tag == "Prealloc") {
+        var value_opt = MLInterpreter.run_expression(state, ctx, binding.prealloc);
+
+        if(value_opt.tag == "Result")
+          value = value_opt.result;
+        else
+          return;
+      }
+
+      else
+        value = binding.normal_alloc;
+
+      /* Make the string */
+      var res = "<li>" + name + " = ";
+      res += string_of_ml_value(state, value);
+      res += "</li>";
+      return acc + res;
+    }
+
+    /* Make a list from the stringified bindings */
+    var res = "<ul>";
+    res += MLList.foldl(show_binding, "", md.value.bindings);
+    res += "</ul>";
+    return res;
+  }
+
+  else
+    return "";
+}
+
+/** Display the execution context in the given target */
+function show_execution_ctx(state, execution_ctx, target) {
+  var t = $("#" + target);
+  var lex_env = execution_ctx.execution_ctx_lexical_env;
+
+  /* Show the pair of name and allocation */
+  var show_binding = function(pair) {
+    var name = pair.key;
+    var idx = pair.value;
+    var binding = Vector.get(state, idx);
+    var value = undefined;
+
+    if(binding === undefined)
+      return;
+
+    /* Get the value from the allocation */
+    if(binding.tag == "Prealloc") {
+      var value_opt = MLInterpreter.run_expression(state, execution_ctx, binding.prealloc);
+
+      if(value_opt.tag == "Result")
+        value = value_opt.result;
+      else
+        return;
+    }
+
+    else
+      value = binding.normal_alloc;
+
+    /* Display the pair */
+    t.append(name + " = ");
+    show_value(state, value, target, 0);
+    t.append("<br/>");
+  }
+
+  /* Apply the function show_binding on every element of the list of bindings */
+  MLList.map(show_binding, lex_env.bindings);
+
+  var modules = execution_ctx.opened_modules;
+
+  /* Make a string from the module identifier */
+  function show_module_name(id) {
+    if(id.tag == "Lident")
+      return id.id;
+    else
+      show_module_name(id.path) + id.id;
+  }
+
+  /* Show the list of opened modules */
+  if(modules.tag != "[]") {
+    t.append("<br/><strong>Opened modules :</strong>");
+    var buf = "<ul>";
+
+    /* Make handlers to show or hide the module contents */
+    var populate_handlers = function(obj_target, head_id) {
+      var handler_close = function() {
+        handlers[obj_target] = handler_open;
+        $('#' + obj_target).html("");
+        interpreter.focus();
+      }
+
+      var handler_open = function() {
+        handlers[obj_target] = handler_close;
+        $('#' + obj_target).html("<br/>" + show_module_contents(state, execution_ctx, head_id, 1));
+        interpreter.focus();
+      }
+
+      handlers[obj_target] = handler_open;
+    }
+
+    while(modules.tag != "[]") {
+      var obj_target = fresh_id();
+      var head_id = modules.head.id;
+      buf += '<li><a onclick="handlers[\'' + obj_target + '\']()">'
+        + show_module_name(head_id)
+        + "</a><span id=\"" + obj_target + "\" "
+        + "style=\"padding-left: 1em;\"></span></li>";
+      modules = modules.tail;
+
+      populate_handlers(obj_target, head_id);
+    }
+
+    buf += "</ul>";
+    t.append(buf);
   }
 }
 
-function show_decl_env_record(state, env_record_decl, target) {
-   // env_record_decl : (string, mutability * value) Heap.heap
-   var t = $("#" + target);
-   var items_array = encoded_list_to_array(HeapStr.to_list(env_record_decl));
-   for (var i = 0; i < items_array.length; i++) {
-      var var_name = items_array[i][0];
-      var mutability = items_array[i][1][0];
-      var value = items_array[i][1][1];
-      var value_target = fresh_id();
-      t.append("<div id='" + value_target + "'>	&rarr; " + html_escape(var_name) + ":</div>");
-      // + " (" + string_of_mutability(mutability) + ")" +
-      show_value(state, value, value_target, 0);
-   }
+/** Delete recursively the "loc" property of an object */
+function delete_loc(obj) {
+  if(obj.hasOwnProperty("loc"))
+    delete obj.loc;
+
+  for(var attr_name in obj) {
+    var attr = obj[attr_name];
+    if(typeof(attr) == "object") {
+      delete_loc(attr);
+    }
+  }
 }
 
-function show_lexical_env(state, lexical_env, target) {
-   var t = $("#" + target);
-   // var env_record_heap = state.state_env_record_heap;
-   var env_loc_array = encoded_list_to_array(lexical_env);
-   for (var i = 0; i < env_loc_array.length; i++) {
-      var env_loc = env_loc_array[i];
-      var env_record_opt = JsCommonAux.env_record_binds_option(state, env_loc);
-      if (env_record_opt.tag != "Some") throw "show_object: unbound object";
-      var env_record = env_record_opt.value;
+/** Display the syntax object in the specified target */
+function show_syntax_object(obj, target) {
+  var t = $('#' + target);
 
-      switch (env_record.tag) {
-        case "Coq_env_record_decl":
-          var env_record_decl = env_record.value;
-          var items_target = fresh_id();
-          t.append("<div><b>&bull; environment-record-declaration</b>: <div style='margin-left: 1em' id='" + items_target + "'></div></div>");
-          show_decl_env_record(state, env_record_decl, items_target)
-          break;
-        case "Coq_env_record_object":   
-          var object_loc = env_record.value;
-          var obj_value = { tag: "Coq_value_object", value: object_loc };
-          var provide_this = env_record.provide_this;
+  /* Special case when the object is a constant (number, string or char) */
+  if(typeof(obj) != "object") {
+    t.append(obj);
+    return;
+  }
+
+  /* Display the constructor label */
+  if(obj.tag !== undefined)
+    t.append("<strong>" + obj.tag + "</strong>:<br/>");
+  /* Display each property of the syntax object */
+  for(var attr_name in obj) {
+    (function() {
+      if(attr_name != "tag") {
+        var attr = obj[attr_name];
+
+        /* The attribute name being a number indicates that obj is an array.
+         * Arrays' elements are just listed without printing the index beforehand. */
+        if(isNaN(parseFloat(attr_name))) {
           var obj_target = fresh_id();
-          t.append("<div id='" + obj_target + "'><b>&bull; environment-record-object</b>:</div>");
-          // (" + ((provide_this) ? "" : "not ") + "providing 'this'):
-          show_value(state, obj_value, obj_target, 0);
-          // show_object(state, object_loc, obj_target, 1);
-          break;
-        default: 
-          throw "invalid env_record.tag";
+          var style = "margin: 0.5em 0.5em 0.5em 0.5em;"
+            + "padding: 5px 5px 5px 5px;"
+            + "border-width: 1px; border-style: dashed; border-radius: 5px;"
+            + "display: inline-block";
+          t.append('<a onclick=handlers["' + obj_target + '"]()>'
+            + attr_name + '</a>'
+            + '<div id="' + obj_target + '"></div>');
+
+          function handler_open() {
+            handlers[obj_target] = handler_close;
+            show_syntax_object(attr, obj_target);
+            $('#' + obj_target).attr("style", style);
+          }
+
+          function handler_close() {
+            handlers[obj_target] = handler_open;
+            $('#' + obj_target).html("");
+            $('#' + obj_target).attr("style", "");
+          }
+
+          handlers[obj_target] = handler_open;
+        }
+
+        else {
+          show_syntax_object(attr, target);
+          t.append("<br/>");
+        }
       }
-   }
+    }());
+  }
 }
-
-
-function show_execution_ctx(state, execution_ctx, target) {
-  var t = $("#" + target);
-
-  // strictness
-  t.append("<div><b>strictness</b>: " + execution_ctx.execution_ctx_strict + " </div>");
-
-  // this object
-  var this_target = fresh_id();
-  t.append("<div id='" + this_target + "'><b>this:</b> </div>");
-  //TODO 
-  show_value(state, execution_ctx.execution_ctx_this_binding, this_target, 0);
-
-  // lexical env
-  var lexical_env_target = fresh_id();
-  t.append("<div><b>lexical-env:</b> <div style='margin-left: 1em' id='" + lexical_env_target + "'></div></div>");
-  show_lexical_env(state, execution_ctx.execution_ctx_lexical_env, lexical_env_target);
-  
-  // variable env -- TODO, like above
-  var variable_env_target = fresh_id();
-  t.append("<div><b>variable-env:</b> <div style='margin-left: 1em' id='" + variable_env_target + "'></div></div>");
-  show_lexical_env(state, execution_ctx.execution_ctx_variable_env, variable_env_target);
-}
-
-
-
 
 // --------------- Views for interpreter context ----------------
-
-/*
-function updateContext(targetid, state, env) {
- $(targetid).html("");
- if (env === undefined)
-   return;
- if (state === undefined)
-   return;
- array_of_env(env).map(function(env){
-   var target = fresh_id();
-   $(targetid).append("<div id='" + target + "'></div>");
-   $("#" + target).html(env.name + ": ");
-   var depth = 1;
-   show_value(state, env.val, target, depth);
- });
-}
-*/
 
 function has_tag_in_set(value, array_tags) {
   return (value.tag !== undefined &&
@@ -1014,29 +1007,27 @@ function interp_val_is_base_value(val) {
          t == "null";
 }
 
-function interp_val_is_js_prim(v) {
-  return has_tag_in_set(v, [ "Coq_prim_undef", "Coq_prim_null", "Coq_prim_bool", "Coq_prim_number", "Coq_prim_string" ]);
-}
-
-function interp_val_is_js_value(v) {
-  return has_tag_in_set(v, ["Coq_value_prim", "Coq_value_object" ]);
-}
-
-function interp_val_is_loc(v) {
-  return has_tag_in_set(v, [ "Coq_object_loc_normal", "Coq_object_loc_prealloc" ]);
-}
-
 function interp_val_is_list(v) {
   return has_tag_in_set(v, [ "::", "[]" ]);
 }
   
 function interp_val_is_syntax(v) {
-  return has_tag_in_set(v, [ "Coq_expr_this", "Coq_expr_identifier", "Coq_expr_literal", "Coq_expr_object", "Coq_expr_array", "Coq_expr_function", "Coq_expr_access", "Coq_expr_member", "Coq_expr_new", "Coq_expr_call", "Coq_expr_unary_op", "Coq_expr_binary_op", "Coq_expr_conditional", "Coq_expr_assign", "Coq_propbody_val", "Coq_propbody_get", "Coq_propbody_set", "Coq_funcbody_intro", "Coq_stat_expr", "Coq_stat_label", "Coq_stat_block", "Coq_stat_var_decl", "Coq_stat_if", "Coq_stat_do_while", "Coq_stat_while", "Coq_stat_with", "Coq_stat_throw", "Coq_stat_return", "Coq_stat_break", "Coq_stat_continue", "Coq_stat_try", "Coq_stat_for", "Coq_stat_for_var", "Coq_stat_for_in", "Coq_stat_for_in_var", "Coq_stat_debugger", "Coq_stat_switch", "Coq_switchbody_nodefault", "Coq_switchbody_withdefault", "Coq_switchclause_intro", "Coq_prog_intro", "Coq_element_stat", "Coq_element_func_decl" ]);
+  return has_tag_in_set(v, ["Expression_constant", "Expression_ident", "Expression_let", "Expression_tuple",
+    "Expression_function", "Expression_match", "Expression_apply", "Expression_variant", "Expression_array",
+    "Expression_constructor", "Expression_record", "Expression_field", "Expression_setfield",
+    "Expression_for", "Expression_while", "Expression_sequence", "Expression_assert", "Expression_letmodule",
+    "Constant_integer", "Constant_float", "Constant_char", "Constant_string",
+    "Pattern_any", "Pattern_constant", "Pattern_var", "Pattern_tuple", "Pattern_tuple", "Pattern_array",
+    "Pattern_variant", "Pattern_alias", "Pattern_constructor", "Pattern_or",
+    "Structure_eval", "Structure_value", "Structure_type", "Structure_module", "Structure_modtype",
+    "Structure_include", "Structure_primitive", "Structure_open",
+    "Module_ident", "Module_structure", "Module_functor", "Module_apply", "Module_constraint",
+    "Structure"]);
 }
 
 function interp_val_is_state(v) {
-  // Assume "has a state_object_heap" field iff "is a state"
-  return v.state_object_heap !== undefined;
+  // Assume "has a ary" field iff "is a state"
+  return v.ary !== undefined;
 }
 
 function interp_val_is_execution_ctx(v) {
@@ -1044,6 +1035,15 @@ function interp_val_is_execution_ctx(v) {
   return v.execution_ctx_lexical_env !== undefined;
 }
 
+function interp_val_is_ml_value(v) {
+  return has_tag_in_set(v, ["Value_int", "Value_float", "Value_char", "Value_string",
+    "Value_tuple", "Value_list", "Value_array", "Value_fun", "Value_variant", "Value_struct",
+    "Value_functor", "Value_custom", "Value_exception"]);
+}
+
+function interp_val_is_result(v) {
+  return has_tag_in_set(v, ["Result", "Exception", "Error"]);
+}
 
 function show_interp_val(state, v, target, depth) {
   if (depth == 0) {
@@ -1055,18 +1055,55 @@ function show_interp_val(state, v, target, depth) {
       v = "\"" + v + "\"";
     }
     t.append(html_escape("" + v));
-  } else if (interp_val_is_loc(v)) {
-    show_object(state, v, target, 0);
-  } else if (interp_val_is_js_value(v)) {
-    show_value(state, v, target, 0);
-  } else if (interp_val_is_js_prim(v)) {
-    t.append(string_of_prim(v));
+  } else if (interp_val_is_ml_value(v)) {
+    t.append(string_of_ml_value(state, v));
   } else if (interp_val_is_state(v)) {
     t.append("&lt;state-object&gt;"); 
   } else if (interp_val_is_execution_ctx(v)) {
-    t.append("&lt;execution-ctx-object&gt;"); 
+    var obj_target = fresh_id();
+    /* Make the <execution-ctx-object> a link to display its contents */
+    t.append('<a onclick="handlers[\''
+      + obj_target
+      + '\']()">&lt;execution-ctx-object&gt;</a><div style="padding-left: 1em" id="'
+      + obj_target
+      + '"></div>');
+
+    /* Create handlers to expand the link and display the context contents */
+    function handler_open() {
+      handlers[obj_target] = handler_close;
+      show_execution_ctx(state, v, obj_target, depth-1);
+    }
+
+    function handler_close() {
+      handlers[obj_target] = handler_open;
+      $('#' + obj_target).html("");
+    }
+
+    handlers[obj_target] = handler_open;
   } else if (interp_val_is_syntax(v)) {
-    t.append("&lt;syntax-object&gt;");  // + JSON.stringify(v)
+    var obj_target = fresh_id();
+    /* Make the <syntax-object> a link to display its contents */
+    t.append('<a onclick="handlers[\''
+      + obj_target
+      + '\']()">&lt;syntax-object&gt;</a><div style="padding-left: 1em" id="'
+      + obj_target
+      + '"></div>');
+
+    var clean_v = JSON.parse(JSON.stringify(v));
+    delete_loc(clean_v);
+
+    /* Create handlers to expand the link and display the context contents */
+    function handler_open() {
+      handlers[obj_target] = handler_close;
+      show_syntax_object(clean_v, obj_target);
+    }
+
+    function handler_close() {
+      handlers[obj_target] = handler_open;
+      $('#' + obj_target).html("");
+    }
+
+    handlers[obj_target] = handler_open;
   } else if (interp_val_is_list(v)) {
       var items = encoded_list_to_array(v)
       t.append("List:");
@@ -1077,6 +1114,20 @@ function show_interp_val(state, v, target, depth) {
         $("#" + targetsub).html("&bull; "); 
         show_interp_val(state, vi, targetsub, depth-1);
       }
+  } else if (interp_val_is_result(v)) {
+    switch (v.tag) {
+      case "Result":
+        t.append("Result: ");
+        show_interp_val(state, v.result, target, depth);
+        break;
+      case "Exception":
+        t.append("Exception: ");
+        show_interp_val(state, v.except, target, depth);
+        break;
+      case "Error":
+        t.append("Error: " + v.error);
+        break;
+    }
   } else if (v.tag !== undefined) { // data constructor
       var constr = html_escape(v.tag); // TODO: rename constructor prefix
       var hasArgs = (function() {
@@ -1195,6 +1246,16 @@ function updateSelectionInCodeMirrorAccordingToExt(codeMirrorObj, locByExt) {
     console.log(locByExt);
     return;
   }
+
+  switch(ext) {
+    case "ml":
+      codeMirrorObj.setOption("mode", "text/x-ocaml");
+      break;
+    case "js":
+      codeMirrorObj.setOption("mode", "text/javascript");
+      break;
+  }
+
   updateSelectionInCodeMirror(codeMirrorObj, loc);
 }
 
@@ -1216,7 +1277,6 @@ function updateSelection() {
      console.log("Error: missing line in log event");
 
    } else {
-
      // source panel
      source_loc_selected = item.source_loc;
 
@@ -1225,7 +1285,7 @@ function updateSelection() {
      // console.log(source_loc_selected);
 
      // source heap/env panel
-     if (item.state === undefined || item.execution_ctx === undefined) {
+     if (/*item.state === undefined ||*/ item.execution_ctx === undefined) {
        $("#disp_env").html("<undefined state or context>");
      } else {
        show_execution_ctx(item.state, item.execution_ctx, "disp_env");
@@ -1257,7 +1317,7 @@ function updateSelection() {
 // --------------- CodeMirror ----------------
 
 source = CodeMirror.fromTextArea(document.getElementById('source_code'), {
- mode: 'text/javascript',
+ mode: 'text/x-ocaml',
  lineNumbers: true,
  lineWrapping: true
 });
@@ -1364,7 +1424,7 @@ function assignExtraInfosInTrace() {
              last_loc.end.column);*/
          }
        } else if (interp_val_is_state(binding.val)) {
-         // assuming: 'is an state object' iff 'has a state_object_heap field'
+         // assuming: 'is an state object' iff 'has a ary field'
          last_state = binding.val;
        } else if (interp_val_is_execution_ctx(binding.val)) {
          // assuming: 'is an execution_ctx' iff 'has a execution_ctx_lexical_env field'
@@ -1382,14 +1442,32 @@ function assignExtraInfosInTrace() {
 
 function runDebug() {
   reset_datalog();
-  JsInterpreter.run_javascript(program);
+  // JsInterpreter.run_javascript(program);
+  // CalcInterpreter.eval_expr(program);
+  var s = Vector.empty();
+  var pervasives = MLInterpreter.build_initial_env(s, ExecutionContext.empty);
+  var idx = Vector.append(s, { tag: "Normal", normal_alloc:
+    { tag: "Value_struct", value: ExecutionContext.execution_ctx_lexical_env(pervasives)}});
+  var init = ExecutionContext.add("Pervasives", idx, ExecutionContext.empty);
+  var id = {tag: "Lident", id: "Pervasives"};
+  var env = ExecutionContext.open_module(id, ExecutionContext.execution_ctx_lexical_env(pervasives), init);
+  MLInterpreter.run(s, env, program);
 }
 
 function run() {
  reset_datalog();
  var success = true;
  try {
-    JsInterpreter.run_javascript(program);
+    // JsInterpreter.run_javascript(program);
+    // CalcInterpreter.eval_expr(program);
+    var s = Vector.empty();
+    var pervasives = MLInterpreter.build_initial_env(s, ExecutionContext.empty);
+    var idx = Vector.append(s, { tag: "Normal", normal_alloc:
+      { tag: "Value_struct", value: ExecutionContext.execution_ctx_lexical_env(pervasives)}});
+    var init = ExecutionContext.add("Pervasives", idx, ExecutionContext.empty);
+    var id = {tag: "Lident", id: "Pervasives"};
+    var env = ExecutionContext.open_module(id, ExecutionContext.execution_ctx_lexical_env(pervasives), init);
+    MLInterpreter.run(s, env, program);
  } catch (e) {
    success = false;
    // alert("Error during the run");
@@ -1409,7 +1487,9 @@ function run() {
 }
 
 function parseSource(source, name, readOnly) {
-  var tree = esprimaToAST(esprima.parse(source, {loc: true, range: true}), source, name);
+  // var tree = CalcParserLib.parseExpr(name, source);
+  var tree = MLExplain.parseStructure(name, source);
+  //var tree = esprimaToAST(esprima.parse(source, {loc: true, range: true}), source, name);
   newSourceDoc(name, source, readOnly);
   return tree;
 }
@@ -1423,6 +1503,7 @@ function readSourceParseAndRun() {
    try {
      program = parseSource(code, initialSourceName);
    } catch (e) {
+     console.dir(e, { depth: null });
      return "Parse error";
    }
 
@@ -1435,7 +1516,7 @@ function readSourceParseAndRun() {
 
 // interpreter file displayed initially
 // -- viewFile(tracer_files[0].file);
-viewFile("JsInterpreter.pseudo");
+viewFile("MLInterpreter.ml");
 
 //$timeout(function() {codeMirror.refresh();});
 

@@ -81,6 +81,11 @@ function ctx_push(ctx, bindings) {
       console.log(ctx);
       console.log(bindings);
     }
+
+    if(bindings[i].key == 's' && bindings[i].val.hasOwnProperty('ary')) {
+      bindings[i].val = Object.assign({}, bindings[i].val);
+      bindings[i].val.ary = bindings[i].val.ary.map(a => Object.assign({}, a));
+    }
   }
 
   return {tag: "ctx_cons", next: ctx, bindings: bindings};
