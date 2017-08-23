@@ -49,7 +49,7 @@ PUB_FILES=driver.html libraries jquery-ui-1.11.4.custom jquery_scroll \
 	  esprima-to-ast.js mlexplain/lineof.js navig-driver.js \
 	  mlexplain/assembly.js
 
-dist: jsjsref $(PUB_FILES)
+dist: mlexplain $(PUB_FILES)
 	mkdir -p $@
 	rsync -Rrv $(PUB_FILES) $@
 
