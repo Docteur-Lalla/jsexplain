@@ -47,7 +47,7 @@ doc/jsref: generator
 PUB_FILES=driver.html libraries jquery-ui-1.11.4.custom jquery_scroll \
 	  mlexplain/displayed_sources.js tools.js node_modules/esprima/esprima.js \
 	  esprima-to-ast.js mlexplain/lineof.js navig-driver.js \
-	  mlexplain/assembly.js
+	  mlexplain/assembly.js mlexplain/frontend.js mlexplain/frontend.byte
 
 dist: mlexplain $(PUB_FILES)
 	mkdir -p $@
