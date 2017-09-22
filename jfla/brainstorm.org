@@ -1,0 +1,3 @@
+MLExplain est un interpréteur visuel pas-à-pas de OCaml permettant
+d'inspecter non seulement l'état du programme exécuté mais également
+l'état de l'interprète.
