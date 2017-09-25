@@ -1,0 +1,6 @@
+auto/
+*.aux
+*.log
+paper.pdf
+*.out
+*.synctex.gz
