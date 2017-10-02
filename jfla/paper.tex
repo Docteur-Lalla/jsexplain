@@ -70,18 +70,43 @@ l'état de l'interprète.
 
 Plan
 \begin{itemize}
+\item Introduction
 \item Présentation de JSExplain
   \begin{itemize}
+  \item Son fonctionnement
+    \begin{itemize}
+    \item Ce qu'il fait et comment il s'y prend
+    \end{itemize}
   \item sous langage OCaml pris en entrée
+    \begin{itemize}
+    \item mise en évidence des limites du compilateur OCaml vers JS
+    \end{itemize}
   \item sous langage JavaScript généré
-  \item annotations et comment on s'en sert
+  \item compilateur et annotations
+    \begin{itemize}
+    \item tranformation des types OCaml en objets JS grâce aux annotations
+    \item traces
+    \end{itemize}
   \end{itemize}
 \item Présentation de MLExplain
   \begin{itemize}
   \item le problème du parser, expliquer comment on s'en sort
+    \begin{itemize}
+    \item utilisation de js\_of\_ocaml comme 2e compilateur
+    \end{itemize}
   \item contraster la taille du code de l'interprète ML vs JS
+    \begin{itemize}
+    \item OCaml ayant une sémantique très simple et un nombre de features limité (sans compter l'objet et encore) contrairement à Javascript, on montre que ça se reflète très clairement dans la taille et la complexité du code des interprètes
+    \end{itemize}
   \item capture d'écran
+    \begin{itemize}
+    \item page web de MLExplain avec explication des différentes parties qui la composent
+    \end{itemize}
   \item le problème de la bibliothèque standard
+    \begin{itemize}
+    \item problème de tout code externe à celui écrit directement à la textearea de la page web de MLExplain d'ailleurs
+    \end{itemize}
+  \item Résultats/Conclusion
   \end{itemize}
 \end{itemize}
 
@@ -133,13 +158,14 @@ avancées, comme les motifs imbriqués, sont difficiles à représenter en
 JavaScript, c'est la raison pour laquelle ce compilateur ne gère qu'un 
 sous-ensemble simple d'OCaml qui peut se compiler de manière quasi-transparente 
 en JavaScript. À cause de cela, il est nécessaire d'adapter sa façon d'écrire, 
-ce qui peut donner du code long et fastidieux (figure \ref{code}).
+ce qui peut donner du code long et fastidieux.
 
 JSExplain dispose également d'une interface web permettant d'écrire du 
 JavaScript, de le faire interpréter puis de rejouer pas à pas son exécution. 
 L'interface affiche l'état de l'interpréteur et du programme au fur et à mesure 
 de son avancement grâce aux traces générées par l'interpréteur. Cette interface 
 web est principalement écrite en JavaScript.
+
 \section{Liste des technologies utilisées}
 MLExplain est un projet complexe réunissant plusieurs langages. Dans cette 
 partie nous présenterons ces langages ainsi que les principaux outils utilisés 
@@ -194,6 +220,22 @@ match x with
 | None -> None
 \end{verbatim}
 
+\section{Fonctionnement de JSExplain}
+JSExplain est un interpréteur visuel pour javascript. C'est à dire un 
+interpréteur capable d'afficher l'état du programme exécuté ainsi que son 
+propre état au fur et à mesure de l'exécution. Pour que l'interpréteur puisse 
+afficher l'état dans lequel il se trouve, il est compilé grâce à un compilateur 
+qui ajoute des appels à une fonction de traçage. Les traces obtenues au fur et 
+à mesure de l'exécution permettent de savoir, à tout moment, quelles variables 
+existent, leur valeur ainsi que les valeurs de retour des fonctions de 
+l'interpréteur. L'interface peut réutiliser ces traces afin de d'afficher 
+l'état du programme et de l'interpréteur à chaque état de l'exécution.
+
+\section{Architecture du code}
+Dans ce chapitre nous traiterons de l'architecture du code de MLExplain. Nous 
+allons expliquer le fonctionnement de l'application et nous expliquerons les 
+différentes parties qui la composent. Par la suite nous détaillerons le code de 
+l'interpréteur d'OCaml, qui est la partie centrale du projet.
 
 \section{Compilation de code OCaml vers Javascript}
 MLExplain étant une application web, elle nécessite la compilation du projet en 
@@ -285,9 +327,8 @@ let div : int -> int -> (string, int) Unsafe.t =
   | b -> Unsafe.Result (a / b)
 \end{verbatim}
 
-Dans le code précédent, on voit bien que \verb|div x| est de type
-\verb|int -> (string, int) Unsafe.t|, ce qui correspond parfaitement au type de 
-la fonction dont \verb|>>=| a besoin. On pourrait alors écrire :
+Dans le code précédent, on voit que \verb|div x| est de type \verb|int -> (string, int) Unsafe.t|,
+ce qui correspond parfaitement au type de la fonction dont \verb|>>=| a besoin. On pourrait alors écrire :
 
 \begin{verbatim}
 let res = Unsafe.Result 5 >>= div 3 in
@@ -325,23 +366,6 @@ L'utilisation d'un autre compilateur nous pousse à devoir convertir l'AST du
 programme en javascript explicitement afin que sa représentation en mémoire 
 soit la même que celle attendue par le code compilé par le compilateur de 
 JSExplain.
-
-\section{Architecture du code}
-Dans ce chapitre nous traiterons de l'architecture du code de MLExplain. Nous 
-allons expliquer le fonctionnement de l'application et nous expliquerons les 
-différentes parties qui la composent. Par la suite nous détaillerons le code de 
-l'interpréteur d'OCaml, qui est la partie centrale du projet.
-
-\section{Fonctionnement de JSExplain}
-JSExplain est un interpréteur visuel pour javascript. C'est à dire un 
-interpréteur capable d'afficher l'état du programme exécuté ainsi que son 
-propre état au fur et à mesure de l'exécution. Pour que l'interpréteur puisse 
-afficher l'état dans lequel il se trouve, il est compilé grâce à un compilateur 
-qui ajoute des appels à une fonction de traçage. Les traces obtenues au fur et 
-à mesure de l'exécution permettent de savoir, à tout moment, quelles variables 
-existent, leur valeur ainsi que les valeurs de retour des fonctions de 
-l'interpréteur. L'interface peut réutiliser ces traces afin de d'afficher 
-l'état du programme et de l'interpréteur à chaque état de l'exécution.
 
 \section{L'interpréteur d'OCaml}
 L'ensemble des sources de l'interpréteur d'OCaml se trouve dans le dossier 
