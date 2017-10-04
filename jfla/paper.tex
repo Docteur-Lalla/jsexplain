@@ -13,6 +13,13 @@
 \usepackage{doc}
 \usepackage[utf8]{inputenc}
 
+\usepackage{tikz}
+\usetikzlibrary{positioning}
+\usetikzlibrary{fit}
+
+\usepackage{todonotes}
+\newcommand{\as}[1]{\todo[color=blue!30,caption={}]{#1}}
+\newcommand{\asi}[1]{\todo[color=blue!30,inline]{#1}}
 % use this if you have a long article and want to create an index
 % \usepackage{makeidx}
 
@@ -117,15 +124,33 @@ spécifique en entrée, et l'exécute. Dans ce but, l'interpréteur effectue un
 certain nombre d'analyses dont les plus communes : l'analyse lexicale, 
 l'analyse syntaxique, le typage.
 
-Un interpréteur visuel est un interpréteur qui permet d'afficher l'état du 
-programme au fur et à mesure de son exécution ainsi que l'état de 
-l'interpréteur. JSExplain\footnote{https://github.com/jscert/jsexplain} est un 
-interpréteur visuel pour le langage JavaScript. Le but de cet outil est de 
-permettre de mieux comprendre la sémantique du JavaScript. Pour ce faire, 
-l'interface met en évidence l'expression du programme source en cours 
-d'évaluation ainsi que l'instruction de l'interpréteur exécutée.
+Nous appelons \emph{interpréteur visuel} un interpréteur qui permet d'afficher
+l'état du programme, position dans le source et valeurs des variables locales,
+au fur et à mesure de son exécution, ainsi que l'état de l'interpréteur.
+JSExplain\footnote{https://github.com/jscert/jsexplain} est un interpréteur
+visuel pour le langage JavaScript. Le but de cet outil est de permettre de mieux
+comprendre la sémantique du JavaScript. Pour ce faire, l'interface met en
+évidence l'expression du programme source en cours d'évaluation ainsi que
+l'instruction de l'interpréteur exécutée.
 
-Cet intepréteur visuel contient des instructions permettant de générer des 
+\subsection{Architecture de JSExplain}
+
+\begin{tikzpicture}[nodes = {align = center}]
+  \node (focaml) [draw, text width=2cm] {Interpréteur en fOCaml};
+  \node (fjs) [draw, above right = 0.5cm and 1cm of focaml, text width=2cm] {Interpréteur en fJS};
+  \node (fjsa) [draw, below right = 0.5cm and 1cm of focaml, text width=2cm] {Interpréteur annoté en fJS};
+  \node (ast) [draw, right = of fjsa, text width=2cm] {AST};
+  \node (source) [draw, right = of fjs, text width=2cm, text centered] {Programme};
+  \node [draw, dotted, fit=(fjs) (fjsa) (ast)] {page web};
+  \draw[->] (focaml.north east) -- node[left] {compilateur} (fjs.south west) ;
+  \draw[->] (focaml.south east) -- node[left] {compilateur} (fjsa.north west);
+  \draw[->] (source) -- node [right] {Esprima} (ast);
+\end{tikzpicture}
+
+\asi{dire que l'on interprète du code annoté quand on veut l'afficher, et non
+  annoté quand on ne veut pas l'afficher.}
+
+Cet interpréteur visuel contient des instructions permettant de générer des 
 traces de son exécution. Ces traces contiennent l'état de l'interpréteur au 
 moment de leur génération, ainsi que le contexte d'exécution du programme 
 interprété. Elles sont générées grâce à des appels à la fonction de log 
