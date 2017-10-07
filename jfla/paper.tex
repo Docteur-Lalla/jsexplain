@@ -135,29 +135,16 @@ l'instruction de l'interpréteur exécutée.
 
 \subsection{Architecture de JSExplain}
 
-\begin{tikzpicture}[nodes = {align = center}]
-  \node (focaml) [draw, text width=2cm] {Interpréteur en fOCaml};
-  \node (fjs) [draw, above right = 0.5cm and 1cm of focaml, text width=2cm] {Interpréteur en fJS};
-  \node (fjsa) [draw, below right = 0.5cm and 1cm of focaml, text width=2cm] {Interpréteur annoté en fJS};
-  \node (ast) [draw, right = of fjsa, text width=2cm] {AST};
-  \node (source) [draw, right = of fjs, text width=2cm, text centered] {Programme};
-  \node [draw, dotted, fit=(fjs) (fjsa) (ast)] {page web};
-  \draw[->] (focaml.north east) -- node[left] {compilateur} (fjs.south west) ;
-  \draw[->] (focaml.south east) -- node[left] {compilateur} (fjsa.north west);
-  \draw[->] (source) -- node [right] {Esprima} (ast);
-\end{tikzpicture}
-
-\asi{dire que l'on interprète du code annoté quand on veut l'afficher, et non
-  annoté quand on ne veut pas l'afficher.}
-
-Cet interpréteur visuel contient des instructions permettant de générer des 
-traces de son exécution. Ces traces contiennent l'état de l'interpréteur au 
-moment de leur génération, ainsi que le contexte d'exécution du programme 
-interprété. Elles sont générées grâce à des appels à la fonction de log 
-\verb|log_event|. Dans l'exemple de la figure \ref{log_event}, une trace est 
-générée pour signaler une instruction de retour de fonction. La valeur de retour 
-est sauvegardée (la variable \verb|_return_2|) ainsi que le contexte 
-d'exécution (la variable \verb|ctx_1|).
+JSExplain se présente sous la forme d'une application web se composant 
+principalement d'un interpréteur de Javascript et d'une interface permettant 
+d'écrire du code et de le voir exécuté. Le code de l'interpréteur est annoté 
+avec des instructions permettant de générer des traces de son exécution. Ces 
+traces contiennent l'état de l'interpréteur au moment de leur génération, ainsi 
+que le contexte d'exécution du programme interprété. Elles sont générées grâce à 
+des appels à la fonction de log \verb|log_event|. Dans l'exemple de la figure 
+\ref{log_event}, une trace est générée pour signaler une instruction de retour 
+de fonction. La valeur de retour est sauvegardée (la variable \verb|_return_2|) 
+ainsi que le contexte d'exécution (la variable \verb|ctx_1|).
 
 \begin{figure}[ht]
 \begin{lstlisting}
@@ -174,22 +161,43 @@ L'interpréteur de JSExplain, ainsi que celui de MLExplain, sont écrits en OCam
 et non pas directement en JavaScript. Le code OCaml est compilé vers JavaScript 
 grâce à un compilateur particulier réalisé exprès pour le projet. Ce compilateur 
 traduit le code de manière à pouvoir y placer les appels à \verb|log_event| si 
-le fichier est compilé en mode \emph{log}.
+le fichier est compilé en mode \emph{log}. La figure \ref{arch_jsexplain} 
+décrit ce fonctionnement. Le mode \emph{unlog} de ce compilateur permet de 
+compiler le code OCaml vers du Javascript sans annotations. Le but de ce mode 
+de compilation est de pouvoir ignorer une partie du code de l'interpréteur lors 
+de la génération des traces. Grâce à cela, l'affichage des traces d'exécution 
+ne sera pas pollué par des détails d'implémentation.
 
-Le compilateur de JSExplain ne reconnait pas tout le langage OCaml mais un 
-sous-ensemble de ce dernier. Cette limitation vient du fait que compiler de 
-l'OCaml vers du JavaScript n'est pas trivial. De nombreuses fonctionnalités 
-avancées, comme les motifs imbriqués, sont difficiles à représenter en 
-JavaScript, c'est la raison pour laquelle ce compilateur ne gère qu'un 
-sous-ensemble simple d'OCaml qui peut se compiler de manière quasi-transparente 
-en JavaScript. À cause de cela, il est nécessaire d'adapter sa façon d'écrire, 
-ce qui peut donner du code long et fastidieux.
+\begin{figure}[ht]
+  \begin{tikzpicture}[nodes = {align = center}]
+    \node (focaml) [draw, text width=2cm] {Interpréteur en fOCaml};
+    \node (fjs) [draw, above right = 0.5cm and 1cm of focaml, text width=2cm] 
+{Interpréteur en fJS};
+    \node (fjsa) [draw, below right = 0.5cm and 1cm of focaml, text width=2cm] 
+{Interpréteur annoté en fJS};
+    \node (ast) [draw, right = of fjsa, text width=2cm] {AST};
+    \node (source) [draw, right = of fjs, text width=2cm, text centered] 
+{Programme};
+    \node [draw, dotted, fit=(fjs) (fjsa) (ast)] {page web};
+    \draw[->] (focaml.north east) -- node[left] {compilateur} (fjs.south west) ;
+    \draw[->] (focaml.south east) -- node[left] {compilateur} (fjsa.north west);
+    \draw[->] (source) -- node [right] {Esprima} (ast);
+  \end{tikzpicture}
+  
+  \caption{Architecture de JSExplain}
+  \label{arch_jsexplain}
+\end{figure}
 
-JSExplain dispose également d'une interface web permettant d'écrire du 
-JavaScript, de le faire interpréter puis de rejouer pas à pas son exécution. 
-L'interface affiche l'état de l'interpréteur et du programme au fur et à mesure 
-de son avancement grâce aux traces générées par l'interpréteur. Cette interface 
-web est principalement écrite en JavaScript.
+Le compilateur utilisé par JSExplain afin de générer du Javascript annoté ne 
+reconnait pas tout le langage OCaml mais un sous-ensemble de ce dernier. Cette 
+limitation vient du fait que compiler de l'OCaml vers du JavaScript n'est pas 
+trivial. De nombreuses fonctionnalités avancées, comme les motifs imbriqués, 
+sont difficiles à représenter en JavaScript, c'est la raison pour laquelle ce 
+compilateur ne gère qu'un sous-ensemble simple d'OCaml qui peut se compiler de 
+manière quasi-transparente en JavaScript. À cause de cela, il est nécessaire 
+d'adapter sa façon d'écrire, ce qui peut donner du code long et fastidieux.
+
+\asi{Parler de l'interface web et dire qu'elle est écrite en JS}
 
 \section{Liste des technologies utilisées}
 MLExplain est un projet complexe réunissant plusieurs langages. Dans cette 
