@@ -197,23 +197,14 @@ compilateur ne gère qu'un sous-ensemble simple d'OCaml qui peut se compiler de
 manière quasi-transparente en JavaScript. À cause de cela, il est nécessaire 
 d'adapter sa façon d'écrire, ce qui peut donner du code long et fastidieux.
 
-\asi{Parler de l'interface web et dire qu'elle est écrite en JS}
-
-\section{Liste des technologies utilisées}
-MLExplain est un projet complexe réunissant plusieurs langages. Dans cette 
-partie nous présenterons ces langages ainsi que les principaux outils utilisés 
-pour mettre au point MLExplain.
-
-\section{Langages utilisés}
-\subsection{Javascript}
-Javascript est un langage de script orienté objet à prototypes. Il est 
-principalement employé dans le développement de pages web interactives, mais 
-aussi dans des applications serveurs grâce à des plateformes de développement 
-telles que NodeJS.
-
-MLExplain utilise intensivement javascript comme langage cible, puisque 
-l'interpréteur d'OCaml est entièrement compilé vers javascript. Il est aussi 
-utilisé pour manipuler l'interface web de MLExplain.
+L'interface web de JSExplain est une page HTML pouvant être découpée en trois
+parties. La première partie est une zone de texte où l'utilisateur peut écrire
+du code Javascript afin que celui-ci soit interprété. La seconde partie, à
+droite de la première, est un cadre dans lequel état du programme précédemment
+écrit est détaillé. Dans cet encadré sera affiché le contexte d'exécution ainsi
+que la valeur des différentes variables définies dans le code. Enfin, la
+troisième partie de cette page, en bas de la première, détaille l'état de
+l'interpréteur.
 
 \subsection{OCaml}
 Caml est un langage fonctionnel de la famille des langages ML développé par 
@@ -223,7 +214,7 @@ ou l'assistant de preuves interactif Coq. OCaml est un langage adapté à
 l'écriture de compilateurs, c'est la raison pour laquelle il est utilisé dans ce 
 projet.
 
-La grande majorité du code OCaml écrit dans MLExplain ne représente qu'un 
+La grande majorité du code OCaml écrit dans JSExplain ne représente qu'un 
 sous-ensemble du langage. En effet, l'un des compilateurs utilisés et présenté 
 dans la section suivante ne gère qu'une sous-ensemble très restraint du langage 
 OCaml. Il n'est pas possible d'utiliser les fonctionalités impératives et 
@@ -252,6 +243,24 @@ match x with
   end
 | None -> None
 \end{verbatim}
+
+\section{Liste des technologies utilisées}
+MLExplain est un projet complexe réunissant plusieurs langages. Dans cette 
+partie nous présenterons ces langages ainsi que les principaux outils utilisés 
+pour mettre au point MLExplain.
+
+\section{Langages utilisés}
+\subsection{Javascript}
+Javascript est un langage de script orienté objet à prototypes. Il est 
+principalement employé dans le développement de pages web interactives, mais 
+aussi dans des applications serveurs grâce à des plateformes de développement 
+telles que NodeJS.
+
+MLExplain utilise intensivement javascript comme langage cible, puisque 
+l'interpréteur d'OCaml est entièrement compilé vers javascript. Il est aussi 
+utilisé pour manipuler l'interface web de MLExplain.
+
+
 
 \section{Fonctionnement de JSExplain}
 JSExplain est un interpréteur visuel pour javascript. C'est à dire un 
