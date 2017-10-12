@@ -135,9 +135,25 @@ l'instruction de l'interpréteur exécutée.
 
 \subsection{Architecture de JSExplain}
 
-JSExplain se présente sous la forme d'une application web se composant 
-principalement d'un interpréteur de Javascript et d'une interface permettant 
-d'écrire du code et de le voir exécuté. Le code de l'interpréteur est annoté 
+\begin{figure*}
+  \centering
+  \includegraphics[width=\textwidth]{jsexplain.png}
+  \caption{JSExplain}
+  \label{fig:jsexplain}
+\end{figure*}
+
+JSExplain (Figure \ref{fig:jsexplain}) se présente sous la forme d'une
+application web se composant principalement d'un interpréteur de Javascript
+(dont le code est visible en bas de la figure) et d'une interface permettant
+d'écrire du code (en haut à gauche). L'état du programme interprété est visible
+en haut à droite, et l'état de l'interprète tout en bas. La zone centrale permet
+de naviguer dans l'exécution du programme.
+
+L'exécution du programme n'est pas directement interactive : le programme est
+exécuté en entier lorsque le bouton \texttt{run} est appuyé, et son exécution
+génère une trace qui peut ensuite être naviguée en utilisant l'interface.
+
+Le code de l'interpréteur est annoté 
 avec des instructions permettant de générer des traces de son exécution. Ces 
 traces contiennent l'état de l'interpréteur au moment de leur génération, ainsi 
 que le contexte d'exécution du programme interprété. Elles sont générées grâce à 
