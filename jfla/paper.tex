@@ -75,19 +75,27 @@ l'état de l'interpréteur.
 
 \section{Introduction}
 
-La sémantique d'un langage de programmation peut être très complexe. Lorsque la
-sémantique n'est pas spécifiée, elle correspond aux implémentations (interpréteurs
-et compilateurs) du langage. Même quand elle est spécifiée, la spécification
-peut être difficile à comprendre. En particulier, l'exécution d'un programme
-donné peut surprendre.
+La sémantique d'un langage de programmation peut être très complexe. Lorsque
+qu'un langage ne possède pas de spécification, la sémantique correspond alors
+aux implémentations (interpréteurs et compilateurs) du langage. Mais même en
+présence d'une spécification, il peut être difficile de comprendre pourquoi
+l'exécution d'un programme particulier donne un certain résultat.
 
 Le projet JSExplain a pour objectif de décrire l'exécution d'un programme
 JavaScript en montrant toutes les étapes d'un interpréteur très proche de la
 spécification de JavaScript. Ce papier montre comment nous avons adapté
 JSExplain au langage OCaml.
 
+À la différence de JavaScript, OCaml ne possède pas de spécification. En
+revanche, l'exécution de code OCaml est particulièrement simple car le nombre de
+constructions manipulées est très réduit. 
+
 Dire que l'on fournit une sémantique plus simple de OCaml que le passage par la
 compilation et ZINC.
+
+Pas besoin de parler de GC.
+
+Donner le langage d'entrée (quelle tête à l'AST)
 
 Plan
 \begin{itemize}
