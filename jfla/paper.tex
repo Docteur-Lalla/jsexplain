@@ -242,7 +242,9 @@ droite de la première, est un cadre dans lequel état du programme précédemme
 écrit est détaillé. Dans cet encadré sera affiché le contexte d'exécution ainsi
 que la valeur des différentes variables définies dans le code. Enfin, la
 troisième partie de cette page, en bas de la première, détaille l'état de
-l'interpréteur.
+l'interpréteur. Le code de l'interpréteur, lui aussi affiché sur cette partie, 
+défile en fonction de l'instruction en cours d'exécution. Cette instruction est 
+surlignée afin d'être mise en évidence.
 
 \subsection{OCaml}
 Caml est un langage fonctionnel de la famille des langages ML développé par 
@@ -448,6 +450,21 @@ soit la même que celle attendue par le code compilé par le compilateur de
 JSExplain.
 
 \section{L'interpréteur d'OCaml}
+Deux versions de l'interpréteur ont été écrites. La première version est 
+compilée vers javascript afin d'être intégrée à l'interface web de MLExplain. 
+Elle se base sur l'arbre syntaxique abstrait typé d'OCaml (le \emph{Typedtree}).
+La seconde version est un interpréteur interactif en ligne de commande écrit
+en OCaml et compilé avec le compilateur standard du langage. Cet interpréteur 
+se base sur l'arbre syntaxique abstrait non typé d'OCaml dans le but de réduire 
+au maximum la dépendence envers le compilateur officiel et se limiter à 
+l'analyseur syntaxique. L'interpréteur en ligne de commande exécute donc du code
+OCaml non typé.
+
+Ne pas typer le code OCaml a été une source de problème majeure. Certaines 
+fonctionnalités du langage telles que les paramètres nommés et optionnels des 
+fonctions ne peuvent pas être interprétées sans un typage préalable du code.
+
+\subsection{Arichtecture du code}
 L'ensemble des sources de l'interpréteur d'OCaml se trouve dans le dossier 
 \emph{mlexplain/} et peut se découper en trois parties : la partie 
 frontale, la gestion de l'état et des contextes des programmes et enfin 
