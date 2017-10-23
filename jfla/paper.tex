@@ -17,6 +17,8 @@
 \usetikzlibrary{positioning}
 \usetikzlibrary{fit}
 
+\usepackage{minted}
+
 \usepackage{todonotes}
 \newcommand{\as}[1]{\todo[color=blue!30,caption={}]{#1}}
 \newcommand{\asi}[1]{\todo[color=blue!30,inline]{#1}}
@@ -81,25 +83,27 @@ aux implémentations (interpréteurs et compilateurs) du langage. Mais même en
 présence d'une spécification, il peut être difficile de comprendre pourquoi
 l'exécution d'un programme particulier donne un certain résultat.
 
-Le projet JSExplain a pour objectif de décrire l'exécution d'un programme
-JavaScript en montrant toutes les étapes d'un interpréteur très proche de la
-spécification de JavaScript. Ce papier montre comment nous avons adapté
-JSExplain au langage OCaml.
+Le projet JSExplain\footnote{\url{https://github.com/jscert/jsexplain}} a pour
+objectif de décrire l'exécution d'un programme JavaScript en montrant toutes les
+étapes d'un interpréteur très proche de la spécification de JavaScript. Ce
+papier montre comment nous avons adapté JSExplain au langage OCaml.
 
 À la différence de JavaScript, OCaml ne possède pas de spécification. En
 revanche, l'exécution de code OCaml est particulièrement simple car le nombre de
-constructions manipulées est très réduit. 
-
-Dire que l'on fournit une sémantique plus simple de OCaml que le passage par la
-compilation et ZINC.
+constructions manipulées est très réduit. Nous avons ainsi écrit un interpréteur
+pour l'arbre de syntaxe abstrait (AST) typé de OCaml. Cet AST reste proche du
+code source, et s'appuyer sur la version typée permet entre autres d'avoir accès
+aux noms complètement résolus, ce qui est très utile pour la résolution
+d'inclusion de modules et de signatures. La sémantique que nous proposons est
+plus haut niveau que celle décrite par la machine abstraite ZINC
+\cite{Leroy-ZINC}, qui se situe au niveau d'un code objet produit par un
+compilateur. 
 
 Pas besoin de parler de GC.
 
 Donner le langage d'entrée (quelle tête à l'AST)
 
-Plan
 \begin{itemize}
-\item Introduction
 \item Présentation de JSExplain
   \begin{itemize}
   \item Son fonctionnement
@@ -175,36 +179,36 @@ L'exécution du programme n'est pas directement interactive : le programme est
 exécuté en entier lorsque le bouton \texttt{run} est appuyé, et son exécution
 génère une trace qui peut ensuite être naviguée en utilisant l'interface.
 
-Le code de l'interpréteur est annoté 
-avec des instructions permettant de générer des traces de son exécution. Ces 
-traces contiennent l'état de l'interpréteur au moment de leur génération, ainsi 
-que le contexte d'exécution du programme interprété. Elles sont générées grâce à 
-des appels à la fonction de log \verb|log_event|. Dans l'exemple de la figure 
-\ref{log_event}, une trace est générée pour signaler une instruction de retour 
-de fonction. La valeur de retour est sauvegardée (la variable \verb|_return_2|) 
-ainsi que le contexte d'exécution (la variable \verb|ctx_1|).
+Le code de l'interpréteur est annoté avec des instructions permettant de générer
+ces traces lorsqu'il interprète un programme. Ces traces contiennent l'état de
+l'interpréteur au moment de leur génération, ainsi que le contexte d'exécution
+du programme interprété. Elles sont générées grâce à des appels à la fonction de
+log \verb|log_event|. Dans l'exemple de la figure \ref{log_event}, une trace est
+générée pour signaler une instruction de retour de fonction. La valeur de retour
+est sauvegardée (la variable \verb|_return_2|) ainsi que le contexte d'exécution
+(la variable \verb|ctx_1|).
 
 \begin{figure}[ht]
-\begin{lstlisting}
+\begin{minted}{javascript}
 log_event("MLInterpreter.js",
   1,
   ctx_push(ctx_1, [{key: "#RETURN_VALUE#", val:_return_2}]),
   "return");
-\end{lstlisting}
+\end{minted}
 \caption{Appel à log\_event extrait de MLInterpreter.log.js}
 \label{log_event}
 \end{figure}
 
-L'interpréteur de JSExplain, ainsi que celui de MLExplain, sont écrits en OCaml 
-et non pas directement en JavaScript. Le code OCaml est compilé vers JavaScript 
-grâce à un compilateur particulier réalisé exprès pour le projet. Ce compilateur 
-traduit le code de manière à pouvoir y placer les appels à \verb|log_event| si 
-le fichier est compilé en mode \emph{log}. La figure \ref{arch_jsexplain} 
-décrit ce fonctionnement. Le mode \emph{unlog} de ce compilateur permet de 
-compiler le code OCaml vers du Javascript sans annotations. Le but de ce mode 
-de compilation est de pouvoir ignorer une partie du code de l'interpréteur lors 
-de la génération des traces. Grâce à cela, l'affichage des traces d'exécution 
-ne sera pas pollué par des détails d'implémentation.
+L'interpréteur de JSExplain, ainsi que celui de MLExplain, sont écrits en OCaml
+et non pas directement en JavaScript. Le code OCaml est compilé vers JavaScript
+grâce à un compilateur préservant autant que possible la structure du code. Ce
+compilateur sert également à intégrer les appels à \verb|log_event| lorsque le
+fichier est compilé en mode \emph{log}. La figure \ref{arch_jsexplain} décrit ce
+fonctionnement. Le mode \emph{unlog} de ce compilateur permet de compiler le
+code OCaml vers du Javascript sans annotations. Le but de ce mode de compilation
+est de pouvoir ignorer une partie du code de l'interpréteur lors de la
+génération des traces. Grâce à cela, l'affichage des traces d'exécution ne sera
+pas pollué par des détails d'implémentation de fonctions annexes.
 
 \begin{figure}[ht]
   \begin{tikzpicture}[nodes = {align = center}]
@@ -511,3 +515,8 @@ contient les algorithmes d'exécution du code.
 
 \end{document}
 
+%%% Local Variables:
+%%% coding: utf-8
+%%% mode: latex
+%%% TeX-engine: latex_sh
+%%% End:
