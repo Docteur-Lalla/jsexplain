@@ -14,8 +14,7 @@
 \usepackage[utf8]{inputenc}
 
 \usepackage{tikz}
-\usetikzlibrary{positioning}
-\usetikzlibrary{fit}
+\usetikzlibrary{positioning,fit,shapes,arrows.meta}
 
 \usepackage{minted}
 
@@ -214,20 +213,25 @@ l'affichage des traces d'exécution ne sera pas pollué par des détails
 d'implémentation de fonctions annexes.
 
 \begin{figure}[ht]
+  \begin{center}
   \begin{tikzpicture}[nodes = {align = center}]
-    \node (focaml) [draw, text width=2cm] {Interpréteur en fOCaml};
-    \node (fjs) [draw, above right = 0.5cm and 1cm of focaml, text width=2cm] 
-{Interpréteur en fJS};
-    \node (fjsa) [draw, below right = 0.5cm and 1cm of focaml, text width=2cm] 
-{Interpréteur annoté en fJS};
-    \node (ast) [draw, right = of fjsa, text width=2cm] {AST};
-    \node (source) [draw, right = of fjs, text width=2cm, text centered] 
-{Programme};
-    \node [draw, dotted, fit=(fjs) (fjsa) (ast)] {page web};
-    \draw[->] (focaml.north east) -- node[left] {compilateur} (fjs.south west) ;
-    \draw[->] (focaml.south east) -- node[left] {compilateur} (fjsa.north west);
-    \draw[->] (source) -- node [right] {Esprima} (ast);
+    \node (focaml) [draw, text width=2cm] {Interpréteur et librairies en fOCaml};
+    \node (fjs) [draw, right = 1cm of focaml, text width=2cm, rectangle split, rectangle split parts=2, text centered] 
+{Librairies en fJS \nodepart{second} Interpréteur annoté en fJS};
+    \node (ast) [draw, above = of fjs, text width=2cm] {AST du programme interprété};
+    \node (source) [draw, right = 2cm of ast, text width=2cm, text centered] 
+{Programme interprété};
+    \node [draw, dotted, fit=(fjs) (ast) (source)] {page web};
+    \node (trace) [draw, right = 2cm of fjs, text width=2cm, text centered] 
+{Trace};
+    \path[->,thick,>=stealth] (focaml.north east) edge[bend left] node[above left] {compilateur} (fjs.north west) ;
+    \path[->,thick,>=stealth] (focaml.south east) edge[bend right] node[below left] {\parbox{2cm}{\centering compilateur annotant}} (fjs.south west);
+    \path[->,thick,dotted,>=stealth] (source) edge node [above] {Esprima} (ast);
+    \path[->,thick,dotted,>=stealth] (ast) edge (fjs);
+    \path[->,thick,dotted,>=stealth] (ast) edge (fjs);
+    \path[->,thick,dotted,>=stealth] (fjs) edge (trace);
   \end{tikzpicture}
+  \end{center}
   
   \caption{Architecture de JSExplain}
   \label{arch_jsexplain}
