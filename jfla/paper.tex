@@ -200,15 +200,18 @@ log_event("MLInterpreter.js",
 \end{figure}
 
 L'interpréteur de JSExplain, ainsi que celui de MLExplain, sont écrits en OCaml
-et non pas directement en JavaScript. Le code OCaml est compilé vers JavaScript
-grâce à un compilateur préservant autant que possible la structure du code. Ce
-compilateur sert également à intégrer les appels à \verb|log_event| lorsque le
-fichier est compilé en mode \emph{log}. La figure \ref{arch_jsexplain} décrit ce
-fonctionnement. Le mode \emph{unlog} de ce compilateur permet de compiler le
-code OCaml vers du Javascript sans annotations. Le but de ce mode de compilation
-est de pouvoir ignorer une partie du code de l'interpréteur lors de la
-génération des traces. Grâce à cela, l'affichage des traces d'exécution ne sera
-pas pollué par des détails d'implémentation de fonctions annexes.
+et non pas directement en JavaScript. Plus précisément, nous utilisons un
+sous-ensemble de OCaml, que nous appelons fOCaml, qui est purement fonctionnel
+et décrit en détails ci-dessous. Le code fOCaml est compilé vers fJS, un sous
+ensemble fonctionnel de JavaScript, grâce à un compilateur préservant autant que
+possible la structure du code. Ce compilateur sert également à intégrer les
+appels à \verb|log_event| lorsque le fichier est compilé en mode \emph{log}. La
+figure \ref{arch_jsexplain} décrit ce fonctionnement. Le mode \emph{unlog} de ce
+compilateur permet de compiler le code OCaml vers du Javascript sans
+annotations. Le but de ce mode de compilation est de pouvoir ignorer une partie
+du code de l'interpréteur lors de la génération des traces. Grâce à cela,
+l'affichage des traces d'exécution ne sera pas pollué par des détails
+d'implémentation de fonctions annexes.
 
 \begin{figure}[ht]
   \begin{tikzpicture}[nodes = {align = center}]
