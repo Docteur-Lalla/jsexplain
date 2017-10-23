@@ -186,8 +186,8 @@ du programme interprété. Elles sont générées grâce à des appels à la fon
 log \verb|log_event|. Dans l'exemple de la figure \ref{log_event}, une trace est
 générée pour signaler une instruction de retour de fonction. La valeur de retour
 est sauvegardée (la variable \verb|_return_2|) ainsi que le contexte d'exécution
-(la variable \verb|ctx_1|).
-
+(la variable \verb|ctx_1|). Les contextes sont implémentés par un encodage des
+listes dans des objets JavaScript.
 \begin{figure}[ht]
 \begin{minted}{javascript}
 log_event("MLInterpreter.js",
@@ -234,13 +234,18 @@ d'implémentation de fonctions annexes.
 \end{figure}
 
 Le compilateur utilisé par JSExplain afin de générer du Javascript annoté ne 
-reconnait pas tout le langage OCaml mais un sous-ensemble de ce dernier. Cette 
+reconnaît pas tout le langage OCaml mais un sous-ensemble de ce dernier. Cette 
 limitation vient du fait que compiler de l'OCaml vers du JavaScript n'est pas 
 trivial. De nombreuses fonctionnalités avancées, comme les motifs imbriqués, 
 sont difficiles à représenter en JavaScript, c'est la raison pour laquelle ce 
 compilateur ne gère qu'un sous-ensemble simple d'OCaml qui peut se compiler de 
 manière quasi-transparente en JavaScript. À cause de cela, il est nécessaire 
 d'adapter sa façon d'écrire, ce qui peut donner du code long et fastidieux.
+
+\asi{dire que utilisions initialement une implémentation en JavaScript des
+  tableaux semi-persistants \cite{DBLP:conf/esop/ConchonF08} pour représenter la
+  mémoire JavaScript, mais nous avons depuis réimplémenté et étendu le module
+  Map dans notre sous-ensemble de OCaml.}
 
 L'interface web de JSExplain est une page HTML pouvant être découpée en trois
 parties. La première partie est une zone de texte où l'utilisateur peut écrire
@@ -457,6 +462,29 @@ soit la même que celle attendue par le code compilé par le compilateur de
 JSExplain.
 
 \section{L'interpréteur d'OCaml}
+
+\begin{figure}[ht]
+  \begin{tikzpicture}[nodes = {align = center}]
+    \node (focaml) [draw, text width=2cm] {Interpréteur en fOCaml};
+    \node (fjs) [draw, above right = 0.5cm and 1cm of focaml, text width=2cm] 
+{Interpréteur en fJS};
+    \node (fjsa) [draw, below right = 0.5cm and 1cm of focaml, text width=2cm] 
+{Interpréteur annoté en fJS};
+    \node (ast) [draw, right = of fjsa, text width=2cm] {AST};
+    \node (source) [draw, right = of fjs, text width=2cm, text centered] 
+{Programme};
+    \node [draw, dotted, fit=(fjs) (fjsa) (ast)] {page web};
+    \draw[->] (focaml.north east) -- node[left] {compilateur} (fjs.south west) ;
+    \draw[->] (focaml.south east) -- node[left] {compilateur} (fjsa.north west);
+    \draw[->] (source) -- node [right] {Parser + Typer OCaml avec js\_of\_ocaml} (ast);
+  \end{tikzpicture}
+  
+  \caption{Architecture de MLExplain}
+  \label{arch_mlexplain}
+\end{figure}
+
+\asi{Je propose de ne parler que de MLExplain et pas de l'autre interpréteur.}
+
 Deux versions de l'interpréteur ont été écrites. La première version est 
 compilée vers javascript afin d'être intégrée à l'interface web de MLExplain. 
 Elle se base sur l'arbre syntaxique abstrait typé d'OCaml (le \emph{Typedtree}).
